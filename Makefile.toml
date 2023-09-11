@@ -15,7 +15,6 @@ dependencies = ["clean"]
 [tasks.cargo-test]
 command = "cargo"
 args = ["test"]
-dependencies = ["clean"]
 
 [tasks.test]
 clear = true

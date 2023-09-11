@@ -1,65 +1,6 @@
-use crate::traits::BackedType;
-use crate::RedisGeneric;
-use redis::{Commands, RedisResult};
-use std::ops;
-
-pub type TBool = RedisGeneric<bool>;
-
-impl ops::Not for TBool {
-    type Output = TBool;
-
-    fn not(mut self) -> Self::Output {
-        let field = self.field_name.clone();
-        let value = !self.value;
-        let conn = self.get_conn();
-        let res: RedisResult<()> = conn.set(field, value);
-        res.expect("Failed to set value");
-        self.value = value;
-        self
-    }
-}
-
-impl ops::BitAnd<TBool> for TBool {
-    type Output = TBool;
-
-    fn bitand(mut self, rhs: TBool) -> Self::Output {
-        let field = self.field_name.clone();
-        let value = self.value & rhs.value;
-        let conn = self.get_conn();
-        let res: RedisResult<()> = conn.set(field, value);
-        res.expect("Failed to set value");
-        self.value = value;
-        self
-    }
-}
-
-impl ops::BitOr<TBool> for TBool {
-    type Output = TBool;
-
-    fn bitor(mut self, rhs: TBool) -> Self::Output {
-        let field = self.field_name.clone();
-        let value = self.value | rhs.value;
-        let conn = self.get_conn();
-        let res: RedisResult<()> = conn.set(field, value);
-        res.expect("Failed to set value");
-        self.value = value;
-        self
-    }
-}
-
-impl ops::BitXor<TBool> for TBool {
-    type Output = TBool;
-
-    fn bitxor(mut self, rhs: TBool) -> Self::Output {
-        let field = self.field_name.clone();
-        let value = self.value ^ rhs.value;
-        let conn = self.get_conn();
-        let res: RedisResult<()> = conn.set(field, value);
-        res.expect("Failed to set value");
-        self.value = value;
-        self
-    }
-}
+//! # Boolean Type
+//! This module contains the boolean type.
+pub type TBool = crate::RedisGeneric<bool>;
 
 #[cfg(test)]
 mod tests {
