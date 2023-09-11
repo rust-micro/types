@@ -13,10 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - add .gitignore file
 - add CHANGELOG.md file
 - add compose.yaml file for docker
-- add generic Integer type
 - add Redis as dependency
 - add Makefile.toml for cargo-make as task runner
 - add Trait BackedType for Redis connection creation
-- add Macro for Trait BackedType, so we do not need to duplicate code
+- add Generic type RedisGeneric as a wrapper for any type
+- add generic Integer type
 - add String type
 - add Bool type

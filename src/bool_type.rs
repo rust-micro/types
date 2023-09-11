@@ -1,24 +1,9 @@
 use crate::traits::BackedType;
+use crate::RedisGeneric;
 use redis::{Commands, RedisResult};
 use std::ops;
 
-pub struct TBool {
-    value: bool,
-    field_name: String,
-    pub(crate) client: redis::Client,
-    pub(crate) conn: Option<redis::Connection>,
-}
-
-impl TBool {
-    pub fn new(value: bool, client: redis::Client) -> TBool {
-        TBool {
-            value,
-            client,
-            conn: None,
-            field_name: uuid::Uuid::new_v4().to_string(),
-        }
-    }
-}
+pub type TBool = RedisGeneric<bool>;
 
 impl ops::Not for TBool {
     type Output = TBool;
@@ -83,10 +68,10 @@ mod tests {
     #[test]
     fn test_bool() {
         let client = redis::Client::open("redis://localhost/").unwrap();
-        let mut b1 = TBool::new(true, client.clone());
-        let mut b2 = TBool::new(false, client.clone());
-        let b3 = TBool::new(true, client.clone());
-        let b4 = TBool::new(false, client.clone());
+        let mut b1 = TBool::new(true, client.clone(), "b1".to_string());
+        let mut b2 = TBool::new(false, client.clone(), "b2".to_string());
+        let b3 = TBool::new(true, client.clone(), "b3".to_string());
+        let b4 = TBool::new(false, client.clone(), "b4".to_string());
         assert!(b1.value);
         assert!(!b2.value);
         b1 = !b1;
@@ -97,5 +82,13 @@ mod tests {
         assert!(!b2.value);
         b1 = b1 ^ b2;
         assert!(!b1.value);
+    }
+
+    #[test]
+    fn test_partialeq() {
+        let client = redis::Client::open("redis://localhost/").unwrap();
+        let mut b1 = TBool::new(true, client.clone(), "b1".to_string());
+        assert_eq!(b1, true);
+        assert_ne!(b1, false);
     }
 }

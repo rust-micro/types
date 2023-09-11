@@ -1,25 +1,24 @@
+//! The integer module contains the Ti32 struct which is a wrapper around an i32 value stored in Redis.
+//!
+//! # Examples
+//!
+//! ```
+//! use types::i32;
+//! use types::BackedType;
+//!
+//! let client = redis::Client::open("redis://localhost:6379").unwrap();
+//! let mut i32 = i32::new(1, client.clone(), "test_add".to_string());
+//! i32 = i32 + i32::new(2, client, "test_add2".to_string());
+//! assert_eq!(i32, 3);
+//! assert_eq!(i32.get(), &3);
+//! ```
 use std::ops;
 
+use crate::generic::RedisGeneric;
 use crate::traits::BackedType;
 use redis::{Commands, RedisResult};
 
-pub struct Ti32 {
-    value: i32,
-    field_name: String,
-    pub(crate) client: redis::Client,
-    pub(crate) conn: Option<redis::Connection>,
-}
-
-impl Ti32 {
-    pub fn new(value: i32, client: redis::Client) -> Ti32 {
-        Ti32 {
-            value,
-            client,
-            conn: None,
-            field_name: uuid::Uuid::new_v4().to_string(),
-        }
-    }
-}
+pub type Ti32 = RedisGeneric<i32>;
 
 impl ops::Add<Ti32> for Ti32 {
     type Output = Ti32;
@@ -98,61 +97,62 @@ impl From<Ti32> for i32 {
 mod tests {
     use super::*;
 
+    #[allow(clippy::assign_op_pattern)]
     #[test]
     fn test_add() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone());
-        i32 = i32 + Ti32::new(2, client);
+        let mut i32 = Ti32::new(1, client.clone(), "test_add".to_string());
+        i32 = i32 + Ti32::new(2, client, "test_add2".to_string());
         assert_eq!(i32.value, 3);
     }
 
     #[test]
     fn test_sub() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone());
-        i32 = i32 - Ti32::new(2, client);
+        let mut i32 = Ti32::new(1, client.clone(), "test_sub".to_string());
+        i32 = i32 - Ti32::new(2, client, "test_sub2".to_string());
         assert_eq!(i32.value, -1);
     }
 
     #[test]
     fn test_mul() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone());
-        i32 = i32 * Ti32::new(2, client);
+        let mut i32 = Ti32::new(1, client.clone(), "test_mul".to_string());
+        i32 = i32 * Ti32::new(2, client, "test_mul2".to_string());
         assert_eq!(i32.value, 2);
     }
 
     #[test]
     fn test_div() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone());
-        i32 = i32 / Ti32::new(2, client);
+        let mut i32 = Ti32::new(1, client.clone(), "test_div".to_string());
+        i32 = i32 / Ti32::new(2, client, "test_div2".to_string());
         assert_eq!(i32.value, 0);
     }
 
     #[test]
     fn test_multiple_calculations() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone());
-        i32 = i32 + Ti32::new(2, client.clone());
-        i32 = i32 - Ti32::new(3, client.clone());
-        i32 = i32 * Ti32::new(4, client.clone());
-        i32 = i32 / Ti32::new(5, client.clone());
+        let mut i32 = Ti32::new(1, client.clone(), "test_multiple_calculations".to_string());
+        i32 = i32 + Ti32::new(2, client.clone(), "test_multiple_calculations2".to_string());
+        i32 = i32 - Ti32::new(3, client.clone(), "test_multiple_calculations3".to_string());
+        i32 = i32 * Ti32::new(4, client.clone(), "test_multiple_calculations4".to_string());
+        i32 = i32 / Ti32::new(5, client.clone(), "test_multiple_calculations5".to_string());
         assert_eq!(i32.value, 0);
     }
 
     #[test]
     fn test_add_assign() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone());
-        i32 += Ti32::new(2, client);
+        let mut i32 = Ti32::new(1, client.clone(), "test_add_assign".to_string());
+        i32 += Ti32::new(2, client, "test_add_assign2".to_string());
         assert_eq!(i32.value, 3);
     }
 
     #[test]
     fn test_into() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let i32 = Ti32::new(1, client.clone());
+        let i32 = Ti32::new(1, client.clone(), "test_into".to_string());
         let i: i32 = i32.into();
         assert_eq!(i, 1);
     }
@@ -160,7 +160,7 @@ mod tests {
     #[test]
     fn test_from() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let i32 = Ti32::new(1, client.clone());
+        let i32 = Ti32::new(1, client.clone(), "test_from".to_string());
         let i: i32 = i32.into();
         assert_eq!(i, 1);
     }
