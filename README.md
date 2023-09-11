@@ -14,6 +14,8 @@ makers install
 makers test
 ```
 
+Add your change to the `CHANGELOG.md` file.
+
 ## License
 
-This project is licensed under the [MIT license](LICENSE).
+This project is licensed under the [MIT license](LICENSE.md).
