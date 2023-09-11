@@ -1,3 +1,8 @@
+//! This module contains the generic type.
+//! The generic type is used to implement the common methods for all types.
+//! The generic type is not meant to be used directly.
+//!
+//!
 use crate::traits::BackedType;
 use redis::{Commands, RedisResult, ToRedisArgs};
 use std::fmt::Debug;
