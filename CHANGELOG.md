@@ -19,3 +19,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - add Trait BackedType for Redis connection creation
 - add Macro for Trait BackedType, so we do not need to duplicate code
 - add String type
+- add Bool type

@@ -1,7 +1,9 @@
+mod bool_type;
 mod integer;
 mod string;
 mod traits;
 
+pub use bool_type::TBool as bool;
 pub use integer::Ti32 as i32;
 pub use string::TString as String;
 
@@ -18,4 +20,4 @@ macro_rules! impl_backed_type {
     )*)
 }
 
-impl_backed_type!(i32 String);
+impl_backed_type!(i32 String bool);
