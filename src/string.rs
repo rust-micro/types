@@ -11,7 +11,7 @@ pub struct TString {
 }
 
 impl TString {
-    fn new(value: String, client: redis::Client) -> TString {
+    pub fn new(value: String, client: redis::Client) -> TString {
         TString {
             value,
             client,
