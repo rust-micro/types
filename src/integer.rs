@@ -1,12 +1,13 @@
 use std::ops;
 
+use crate::traits::BackedType;
 use redis::{Commands, RedisResult};
 
 pub struct Ti32 {
     value: i32,
     field_name: String,
-    client: redis::Client,
-    conn: Option<redis::Connection>,
+    pub(crate) client: redis::Client,
+    pub(crate) conn: Option<redis::Connection>,
 }
 
 impl Ti32 {
@@ -17,13 +18,6 @@ impl Ti32 {
             conn: None,
             field_name: uuid::Uuid::new_v4().to_string(),
         }
-    }
-
-    fn get_conn(&mut self) -> &mut redis::Connection {
-        if self.conn.is_none() {
-            self.conn = Some(self.client.get_connection().unwrap());
-        }
-        self.conn.as_mut().unwrap()
     }
 }
 

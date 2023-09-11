@@ -16,3 +16,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - add generic Integer type
 - add Redis as dependency
 - add Makefile.toml for cargo-make as task runner
+- add Trait BackedType for Redis connection creation
+- add Macro for Trait BackedType, so we do not need to duplicate code
+- add String type
