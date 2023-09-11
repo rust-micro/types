@@ -8,9 +8,20 @@
 //!     * unsigned Integer: [u8](crate::u8), [u16](crate::u16), [u32](crate::u32), [u64](crate::u64), [usize](crate::usize)
 //! * [String](crate::String)
 //!
-//! This crate implements the most common traits for the types, so it is frictionless to use them in place of the primitive and most complex types.
+//! This crate implements the most common traits for the primitive types, so it is frictionless to use them in place.
+//! With this crate it is possible to create multiple services that shares the values via Redis.
+//! This is helpful if you want to create a distributed system and run multiple instances of the same service.
+//! Or you want to communicate between different services. All this kind of stuff can be done with this crate.
 //!
-//! # Example
+//! # Upcoming Features
+//!
+//! In a later release it will be possible to lock values like a Mutex or RwLock.
+//! Also it will be possible to create happens-before relationships between store and load operations like atomic types.
+//! So it will be possible to use the types in a concurrent environment in the same way as in a distributed one.
+//!
+//! Also it will be possible to create other backends than Redis.
+//!
+//! # Usage
 //!
 //! ```
 //! use types::i32;
