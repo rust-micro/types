@@ -54,7 +54,7 @@ where
     /// The with_value_load method creates a new instance of the type.
     /// It loads the value from Redis.
     /// If there is no value stored in Redis, it stores a None in cache.
-    pub fn with_value_load(field_name: &str, client: redis::Client) -> RedisGeneric<T> {
+    pub fn with_load(field_name: &str, client: redis::Client) -> RedisGeneric<T> {
         let mut new_type = Self::new(field_name, client);
 
         new_type.cache = new_type.try_get();
@@ -123,8 +123,7 @@ where
     /// assert_eq!(i32.acquire(), &3);
     /// ```
     pub fn acquire(&mut self) -> &T {
-        let res = self.try_get().expect("Failed to get value");
-        self.cache = Some(res);
+        self.cache = self.try_get();
         self.cache.as_ref().unwrap()
     }
 
