@@ -11,7 +11,7 @@ This crate provides a set of types, which are backed by a server, and can be use
 use types::String;
 
 let client = redis::Client::open("redis://localhost/").unwrap();
-let mut s1 = TString::with_value("Hello".to_string(), "s1", client.clone());
+let mut s1 = String::with_value("Hello".to_string(), "s1", client.clone());
 assert_eq!(s1, "Hello");
 ```
 
@@ -19,7 +19,7 @@ assert_eq!(s1, "Hello");
 
 ### Setup
 
-Install `docker` and `docker-compose`.
+Install `cargo` (recommended through `rustup`), `docker` with `compose`.
 
 ```bash
 cargo install cargo-make
