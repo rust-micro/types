@@ -25,12 +25,11 @@
 //!
 //! ```
 //! use types::i32;
-//! use types::BackedType;
 //!
 //! let client = redis::Client::open("redis://localhost:6379").unwrap();
-//! let mut i32 = i32::new(1, client.clone(), "test_add".to_string());
+//! let mut i32 = i32::with_value(1, "test_add", client.clone());
 //!
-//! i32 = i32 + i32::new(2, client, "test_add2".to_string());
+//! i32 = i32 + i32::with_value(2, "test_add2", client.clone());
 //! assert_eq!(i32, 3);
 //! ```
 //!
@@ -40,9 +39,11 @@
 //! But it should not be needed as long as your type implements some or all of the various [Ops](https://doc.rust-lang.org/std/ops/index.html) traits.
 mod bool_type;
 mod generic;
+mod helper;
 mod integer;
 mod string;
-mod traits;
+
+pub(crate) use helper::apply_operator;
 
 pub use bool_type::TBool as bool;
 pub use generic::RedisGeneric;
@@ -51,4 +52,3 @@ pub use integer::{
     Tu64 as u64, Tu8 as u8, Tusize as usize,
 };
 pub use string::TString as String;
-pub use traits::BackedType;

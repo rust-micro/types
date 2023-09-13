@@ -21,51 +21,51 @@ mod tests {
     #[test]
     fn test_add() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone(), "test_add".to_string());
-        i32 = i32 + Ti32::new(2, client, "test_add2".to_string());
-        assert_eq!(i32.value, 3);
+        let mut i32 = Ti32::with_value(1, "test_add", client.clone());
+        i32 = i32 + Ti32::with_value(2, "test_add2", client.clone());
+        assert_eq!(i32, 3);
     }
 
     #[test]
     fn test_sub() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone(), "test_sub".to_string());
-        i32 = i32 - Ti32::new(2, client, "test_sub2".to_string());
-        assert_eq!(i32.value, -1);
+        let mut i32 = Ti32::with_value(1, "test_sub", client.clone());
+        i32 = i32 - Ti32::with_value(2, "test_sub2", client.clone());
+        assert_eq!(i32, -1);
     }
 
     #[test]
     fn test_mul() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone(), "test_mul".to_string());
-        i32 = i32 * Ti32::new(2, client, "test_mul2".to_string());
-        assert_eq!(i32.value, 2);
+        let mut i32 = Ti32::with_value(1, "test_mul", client.clone());
+        i32 = i32 * Ti32::with_value(2, "test_mul2", client.clone());
+        assert_eq!(i32, 2);
     }
 
     #[test]
     fn test_div() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone(), "test_div".to_string());
-        i32 = i32 / Ti32::new(2, client, "test_div2".to_string());
-        assert_eq!(i32.value, 0);
+        let mut i32 = Ti32::with_value(1, "test_div", client.clone());
+        i32 = i32 / Ti32::with_value(2, "test_div2", client.clone());
+        assert_eq!(i32, 0);
     }
 
     #[test]
     fn test_multiple_calculations() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone(), "test_multiple_calculations".to_string());
-        i32 = i32 + Ti32::new(2, client.clone(), "test_multiple_calculations2".to_string());
-        i32 = i32 - Ti32::new(3, client.clone(), "test_multiple_calculations3".to_string());
-        i32 = i32 * Ti32::new(4, client.clone(), "test_multiple_calculations4".to_string());
-        i32 = i32 / Ti32::new(5, client.clone(), "test_multiple_calculations5".to_string());
-        assert_eq!(i32.value, 0);
+        let mut i32 = Ti32::with_value(1, "test_multiple_calculations", client.clone());
+        i32 = i32 + Ti32::with_value(2, "test_multiple_calculations2", client.clone());
+        i32 = i32 - Ti32::with_value(3, "test_multiple_calculations3", client.clone());
+        i32 = i32 * Ti32::with_value(4, "test_multiple_calculations4", client.clone());
+        i32 = i32 / Ti32::with_value(5, "test_multiple_calculations5", client.clone());
+        assert_eq!(i32, 0);
     }
 
     #[test]
     fn test_add_assign() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let mut i32 = Ti32::new(1, client.clone(), "test_add_assign".to_string());
-        i32 += Ti32::new(2, client, "test_add_assign2".to_string());
-        assert_eq!(i32.value, 3);
+        let mut i32 = Ti32::with_value(1, "test_add_assign", client.clone());
+        i32 += Ti32::with_value(2, "test_add_assign2", client.clone());
+        assert_eq!(i32, 3);
     }
 }

@@ -4,7 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[example]]
+name = "2services"
+path = "examples/2services.rs"
+
 
 [dependencies]
 redis = "0.23.3"
-uuid = { version = "1.4.1", features = ["v4"] }
+serde = { version = "1.0.188", features = [] }
+serde_json = "1.0.106"

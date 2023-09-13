@@ -3,355 +3,409 @@
 //! The generic type is not meant to be used directly.
 //!
 //!
-use crate::traits::BackedType;
-use redis::{Commands, RedisResult, ToRedisArgs};
-use std::fmt::Debug;
+use crate::apply_operator;
+use redis::{Commands, RedisResult};
+use serde::{de::DeserializeOwned, Serialize};
+use std::fmt::{Debug, Display};
 use std::ops;
 
 pub struct RedisGeneric<T> {
-    pub(crate) value: T,
-    pub(crate) field_name: String,
+    pub(crate) cache: Option<T>,
+    pub(crate) key: String,
     client: redis::Client,
 }
 
-impl<T> RedisGeneric<T> {
+impl<T> RedisGeneric<T>
+where
+    T: Display + Serialize + DeserializeOwned,
+{
     /// The new method creates a new instance of the type.
+    /// It does not load or store any value in Redis.
+    /// It only creates the instance.
     ///
     /// # Example
     ///
     /// ```
     /// use types::i32;
-    /// use types::BackedType;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
-    /// let mut i32 = i32::new(1, client.clone(), "test_add".to_string());
-    /// i32 = i32 + i32::new(2, client, "test_add2".to_string());
+    /// let mut i32 = i32::new("test_add", client.clone());
+    /// i32.store(1);
+    /// let i32 = i32 + i32::with_value(2, "test_add2", client);
     /// assert_eq!(i32, 3);
     /// ```
-    pub fn new(value: T, client: redis::Client, field_name: String) -> RedisGeneric<T> {
+    pub fn new(field_name: &str, client: redis::Client) -> RedisGeneric<T> {
         RedisGeneric {
-            value,
+            cache: None,
+            key: field_name.to_string(),
             client,
-            field_name,
         }
     }
 
+    /// The with_value method creates a new instance of the type.
+    /// If a value is already stored in Redis, it will be overwritten.
+    pub fn with_value(value: T, field_name: &str, client: redis::Client) -> RedisGeneric<T> {
+        let mut new_type = Self::new(field_name, client);
+
+        new_type.store(value);
+        new_type
+    }
+
+    /// The with_value_load method creates a new instance of the type.
+    /// It loads the value from Redis.
+    /// If there is no value stored in Redis, it stores a None in cache.
+    pub fn with_value_load(field_name: &str, client: redis::Client) -> RedisGeneric<T> {
+        let mut new_type = Self::new(field_name, client);
+
+        new_type.cache = new_type.try_get();
+        new_type
+    }
+
+    /// The with_value_default method creates a new instance of the type.
+    /// If the value is not already stored in Redis, it will be stored.
+    /// If the value is already stored in Redis, it will be loaded and your given value will be ignored.
+    pub fn with_value_default(
+        value: T,
+        field_name: &str,
+        client: redis::Client,
+    ) -> RedisGeneric<T> {
+        let mut new_type = Self::new(field_name, client);
+
+        let v = new_type.try_get();
+        if v.is_none() {
+            new_type.store(value);
+        } else {
+            new_type.cache = v;
+        }
+
+        new_type
+    }
+
     /// The set method sets the value of the type.
-    pub fn set(mut self, value: T) -> Self
-    where
-        T: ToRedisArgs,
-    {
+    pub fn store(&mut self, value: T) {
+        let value = self.set(value);
+        self.cache = Some(value);
+    }
+
+    /// The set method sets the value of the type in redis.
+    /// It does not update the cache.
+    /// This is useful if you want to store a value in redis without updating the cache.
+    fn set(&self, value: T) -> T {
         let mut conn = self.get_conn();
-        let res: RedisResult<()> = conn.set(&self.field_name, &value);
+        let v = serde_json::to_string(&value).expect("Failed to serialize value");
+        let res: RedisResult<()> = conn.set(&self.key, v);
         res.expect("Failed to set value");
-        self.value = value;
-        self
+        value
+    }
+
+    /// Pushes the cache to redis.
+    fn pushes_to_redis(&self) {
+        if self.cache.is_none() {
+            return;
+        }
+        let mut conn = self.get_conn();
+        let v = serde_json::to_string(&self.cache).expect("Failed to serialize value");
+        let res: RedisResult<()> = conn.set(&self.key, v);
+        res.expect("Failed to set value");
     }
 
     /// The get method returns a reference to the value stored in the type.
+    /// Loads it from the redis directly.
     ///
     /// # Example
     ///
     /// ```
     /// use types::i32;
-    /// use types::BackedType;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
-    /// let mut i32 = i32::new(1, client.clone(), "test_add".to_string());
-    /// i32 = i32 + i32::new(2, client, "test_add2".to_string());
-    /// assert_eq!(i32.get(), &3);
+    /// let mut i32 = i32::with_value(1, "test_add", client.clone());
+    /// i32 = i32 + i32::with_value(2, "test_add2", client);
+    /// assert_eq!(i32.acquire(), &3);
     /// ```
-    pub fn get(&self) -> &T {
-        &self.value
+    pub fn acquire(&mut self) -> &T {
+        let res = self.try_get().expect("Failed to get value");
+        self.cache = Some(res);
+        self.cache.as_ref().unwrap()
+    }
+
+    fn try_get(&self) -> Option<T> {
+        let mut conn = self.get_conn();
+        let res: RedisResult<String> = conn.get(&self.key);
+        match res {
+            Ok(v) => {
+                let v: T = serde_json::from_str(&v).expect("Failed to deserialize value");
+                Some(v)
+            }
+            Err(_) => None,
+        }
     }
 
     /// The into_inner method returns the inner value of the type.
-    /// This method consumes the type.
+    /// This method consumes the type and drops everything.
     ///
     /// # Example
     ///
     /// ```
     /// use types::i32;
-    /// use types::BackedType;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
-    /// let mut i32 = i32::new(1, client.clone(), "test_add".to_string());
-    /// i32 = i32 + i32::new(2, client, "test_add2".to_string());
+    /// let i32 = i32::with_value(3, "test_add", client.clone());
     /// let i32_inner = i32.into_inner();
     /// assert_eq!(i32_inner, 3);
     /// ```
-    pub fn into_inner(self) -> T {
-        self.value
-    }
-}
-
-impl<T> BackedType<T> for RedisGeneric<T> {
-    fn get_conn(&self) -> redis::Connection {
-        let conn = self
+    pub fn into_inner(mut self) -> T {
+        let mut conn = self
             .client
             .get_connection()
             .expect("Failed to get connection");
-        conn
+        let _: RedisResult<()> = conn.del(&self.key);
+        self.cache.take().expect("Failed to get value")
     }
 
-    fn get(&self) -> &T {
-        &self.value
+    /// The get_conn method returns a connection to Redis.
+    // FIXME: This should store a persistent connection for performance.
+    pub(crate) fn get_conn(&self) -> redis::Connection {
+        self.client
+            .get_connection()
+            .expect("Failed to get connection")
+    }
+
+    /// The get method returns a reference to the value stored in the type.
+    pub fn cached(&self) -> Option<&T> {
+        self.cache.as_ref()
     }
 }
 
-impl<T> ops::Deref for RedisGeneric<T> {
+impl<T> ops::Deref for RedisGeneric<T>
+where
+    T: Display + Serialize + DeserializeOwned,
+{
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        self.cached().expect("Failed to get value")
     }
 }
 
 impl<T> ops::Add<T> for RedisGeneric<T>
 where
-    T: ops::Add<Output = T> + ToRedisArgs + Copy,
+    T: ops::Add<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn add(self, rhs: T) -> Self::Output {
-        let value = self.value + rhs;
-        self.set(value)
+        apply_operator(self, rhs, |a, b| a + b)
     }
 }
 
 impl<T> ops::Add<RedisGeneric<T>> for RedisGeneric<T>
 where
-    T: ops::Add<Output = T> + ToRedisArgs + Copy,
+    T: ops::Add<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn add(self, rhs: RedisGeneric<T>) -> Self::Output {
-        let value = self.value + rhs.value;
-        self.set(value)
+        self + rhs.into_inner()
     }
 }
 
 impl<T> ops::Sub<T> for RedisGeneric<T>
 where
-    T: ops::Sub<Output = T> + ToRedisArgs + Copy,
+    T: ops::Sub<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn sub(self, rhs: T) -> Self::Output {
-        let value = self.value - rhs;
-        self.set(value)
+        apply_operator(self, rhs, |a, b| a - b)
     }
 }
 
 impl<T> ops::Sub<RedisGeneric<T>> for RedisGeneric<T>
 where
-    T: ops::Sub<Output = T> + ToRedisArgs + Copy,
+    T: ops::Sub<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn sub(self, rhs: RedisGeneric<T>) -> Self::Output {
-        let value = self.value - rhs.value;
-        self.set(value)
+        self - rhs.into_inner()
     }
 }
 
 impl<T> ops::Mul<T> for RedisGeneric<T>
 where
-    T: ops::Mul<Output = T> + ToRedisArgs + Copy,
+    T: ops::Mul<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn mul(self, rhs: T) -> Self::Output {
-        let value = self.value * rhs;
-        self.set(value)
+        apply_operator(self, rhs, |a, b| a * b)
     }
 }
 
 impl<T> ops::Mul<RedisGeneric<T>> for RedisGeneric<T>
 where
-    T: ops::Mul<Output = T> + ToRedisArgs + Copy,
+    T: ops::Mul<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn mul(self, rhs: RedisGeneric<T>) -> Self::Output {
-        let value = self.value * rhs.value;
-        self.set(value)
+        self * rhs.into_inner()
     }
 }
 
 impl<T> ops::Div<T> for RedisGeneric<T>
 where
-    T: ops::Div<Output = T> + ToRedisArgs + Copy,
+    T: ops::Div<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn div(self, rhs: T) -> Self::Output {
-        let value = self.value / rhs;
-        self.set(value)
+        apply_operator(self, rhs, |a, b| a / b)
     }
 }
 
 impl<T> ops::Div<RedisGeneric<T>> for RedisGeneric<T>
 where
-    T: ops::Div<Output = T> + ToRedisArgs + Copy,
+    T: ops::Div<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn div(self, rhs: RedisGeneric<T>) -> Self::Output {
-        let value = self.value / rhs.value;
-        self.set(value)
+        self / rhs.into_inner()
     }
 }
 
 impl<T> ops::AddAssign<T> for RedisGeneric<T>
 where
-    T: ops::AddAssign + ToRedisArgs,
+    T: ops::AddAssign + Display + Serialize + DeserializeOwned,
 {
     fn add_assign(&mut self, rhs: T) {
-        let mut conn = self.get_conn();
-        let res: RedisResult<()> = conn.incr(&self.field_name, &rhs);
-        res.expect("Failed to set value");
-        self.value += rhs;
+        if let Some(ref mut v) = self.cache {
+            *v += rhs;
+        } else {
+            self.cache = Some(rhs);
+        }
+
+        self.pushes_to_redis();
     }
 }
 
 impl<T> ops::AddAssign<RedisGeneric<T>> for RedisGeneric<T>
 where
-    T: ops::AddAssign + ToRedisArgs,
+    T: ops::AddAssign + Display + Serialize + DeserializeOwned,
 {
     fn add_assign(&mut self, rhs: RedisGeneric<T>) {
-        let mut conn = self.get_conn();
-        let res: RedisResult<()> = conn.incr(&self.field_name, &rhs.value);
-        res.expect("Failed to set value");
-        self.value += rhs.value;
+        *self += rhs.into_inner();
     }
 }
 
 impl<T> ops::SubAssign<T> for RedisGeneric<T>
 where
-    T: ops::SubAssign + ToRedisArgs,
+    T: ops::SubAssign + Display + Serialize + DeserializeOwned,
 {
     fn sub_assign(&mut self, rhs: T) {
-        let mut conn = self.get_conn();
-        let res: RedisResult<()> = conn.decr(&self.field_name, &rhs);
-        res.expect("Failed to set value");
-        self.value -= rhs;
+        if let Some(ref mut v) = self.cache {
+            *v -= rhs;
+        } else {
+            self.cache = Some(rhs);
+        }
+
+        self.pushes_to_redis();
     }
 }
 
 impl<T> ops::SubAssign<RedisGeneric<T>> for RedisGeneric<T>
 where
-    T: ops::SubAssign + ToRedisArgs,
+    T: ops::SubAssign + Display + Serialize + DeserializeOwned,
 {
     fn sub_assign(&mut self, rhs: RedisGeneric<T>) {
-        let mut conn = self.get_conn();
-        let res: RedisResult<()> = conn.decr(&self.field_name, &rhs.value);
-        res.expect("Failed to set value");
-        self.value -= rhs.value;
+        *self -= rhs.into_inner();
     }
 }
 
 impl<T> ops::BitOr<T> for RedisGeneric<T>
 where
-    T: ops::BitOr<Output = T> + ToRedisArgs + Copy,
+    T: ops::BitOr<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn bitor(self, rhs: T) -> Self::Output {
-        let value = self.value | rhs;
-        self.set(value)
+        apply_operator(self, rhs, |a, b| a | b)
     }
 }
 
 impl<T> ops::BitOr<RedisGeneric<T>> for RedisGeneric<T>
 where
-    T: ops::BitOr<Output = T> + ToRedisArgs + Copy,
+    T: ops::BitOr<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn bitor(self, rhs: RedisGeneric<T>) -> Self::Output {
-        let value = self.value | rhs.value;
-        self.set(value)
+        self | rhs.into_inner()
     }
 }
 
 impl<T> ops::BitAnd<T> for RedisGeneric<T>
 where
-    T: ops::BitAnd<Output = T> + ToRedisArgs + Copy,
+    T: ops::BitAnd<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn bitand(self, rhs: T) -> Self::Output {
-        let value = self.value & rhs;
-        self.set(value)
+        apply_operator(self, rhs, |a, b| a & b)
     }
 }
 
 impl<T> ops::BitAnd<RedisGeneric<T>> for RedisGeneric<T>
 where
-    T: ops::BitAnd<Output = T> + ToRedisArgs + Copy,
+    T: ops::BitAnd<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn bitand(self, rhs: RedisGeneric<T>) -> Self::Output {
-        let value = self.value & rhs.value;
-        self.set(value)
+        self & rhs.into_inner()
     }
 }
 
 impl<T> ops::BitXor<T> for RedisGeneric<T>
 where
-    T: ops::BitXor<Output = T> + ToRedisArgs + Copy,
+    T: ops::BitXor<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn bitxor(self, rhs: T) -> Self::Output {
-        let value = self.value ^ rhs;
-        self.set(value)
+        apply_operator(self, rhs, |a, b| a ^ b)
     }
 }
 
 impl<T> ops::BitXor<RedisGeneric<T>> for RedisGeneric<T>
 where
-    T: ops::BitXor<Output = T> + ToRedisArgs + Copy,
+    T: ops::BitXor<Output = T> + Display + Serialize + DeserializeOwned,
 {
     type Output = RedisGeneric<T>;
 
     fn bitxor(self, rhs: RedisGeneric<T>) -> Self::Output {
-        let value = self.value ^ rhs.value;
-        self.set(value)
-    }
-}
-
-impl<T> ops::Not for RedisGeneric<T>
-where
-    T: ops::Not<Output = T> + ToRedisArgs + Copy,
-{
-    type Output = RedisGeneric<T>;
-
-    fn not(self) -> Self::Output {
-        let value = !self.value;
-        self.set(value)
+        self ^ rhs.into_inner()
     }
 }
 
 impl<T: PartialEq> PartialEq<T> for RedisGeneric<T> {
     fn eq(&self, other: &T) -> bool {
-        self.value == *other
+        self.cache.as_ref() == Some(other)
     }
 }
 
 impl<T: PartialEq> PartialEq<RedisGeneric<T>> for RedisGeneric<T> {
     fn eq(&self, other: &RedisGeneric<T>) -> bool {
-        self.value == other.value
+        self.cache == other.cache
     }
 }
 
 impl<T: Debug> Debug for RedisGeneric<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Generic")
-            .field("value", &self.value)
-            .field("field_name", &self.field_name)
+            .field("value", &self.cache)
+            .field("field_name", &self.key)
             .finish()
     }
 }
@@ -361,10 +415,10 @@ mod tests {
     use super::*;
     #[test]
     fn test_partialeq() {
-        let s1 = RedisGeneric::new(
+        let s1 = RedisGeneric::with_value(
             2,
+            "test_partialeq",
             redis::Client::open("redis://localhost/").unwrap(),
-            "s1".to_string(),
         );
         assert_eq!(s1, 2);
     }
