@@ -1,6 +1,12 @@
-# Rust Types
+# micro_types
 
 This crate provides a set of types, which are backed by a server, and can be used to create a distributed system.
+
+## Example
+
+```rust
+use types::String;
+```
 
 ## Contributing
 
