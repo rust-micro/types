@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] - Initial release - yyyy-mm-dd
+## [Unreleased] - Lock and ADT - yyyy-mm-dd
+
+- add RedisMutex and RedisGuard
+- rename lib to dtypes
+
+## 0.1 - Initial release - 2023-09-13
 
 ### Added
 
