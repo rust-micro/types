@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - add RedisMutex and RedisGuard
 - rename lib to dtypes
+- strip the string `redis` from all types and place them in a module named `redis`
 - add List and ListCache type
 
 ## 0.1 - Initial release - 2023-09-13

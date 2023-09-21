@@ -1,9 +1,9 @@
 //! # String Type
 //! This module contains the string type.
-use crate::RedisGeneric;
+use crate::redis::Generic;
 use std::ops::{Add, AddAssign};
 
-pub type TString = RedisGeneric<String>;
+pub type TString = Generic<String>;
 
 impl PartialEq<&str> for TString {
     fn eq(&self, other: &&str) -> bool {

@@ -1,4 +1,4 @@
-use crate::RedisGeneric;
+use crate::redis::Generic;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fmt::Display;
@@ -6,12 +6,8 @@ use std::ops::{Deref, DerefMut};
 use thiserror::Error;
 use uuid::Uuid;
 
-pub enum LockEnum<T> {
-    Redis(RedisGeneric<T>),
-}
-
 #[derive(Error, Debug)]
-enum LockError {
+pub enum LockError {
     #[error("Locking failed")]
     LockFailed,
     #[error("Unlocking failed")]
@@ -23,12 +19,12 @@ enum LockError {
 }
 
 #[derive(Debug, PartialEq)]
-enum RedisLockNum {
+enum LockNum {
     Success,
     Fail,
 }
 
-impl From<i8> for RedisLockNum {
+impl From<i8> for LockNum {
     fn from(value: i8) -> Self {
         match value {
             0 => Self::Fail,
@@ -36,15 +32,6 @@ impl From<i8> for RedisLockNum {
             _ => panic!("Unexpected value"),
         }
     }
-}
-
-trait LockGuard<T> {}
-
-trait Lock<'a, T> {
-    type Guard<'b>;
-
-    fn lock(&self) -> Result<Self::Guard<'a>, LockError>;
-    fn unlock(&self) -> Result<Self::Guard<'a>, LockError>;
 }
 
 /// The lock script.
@@ -80,17 +67,17 @@ const DROP_SCRIPT: &str = r#"
 /// It is a wrapper around the data type you want to store like the Mutex in std.
 ///
 /// The lock is released when the guard is dropped or it expires.
-/// The default expiration time is 1000ms. If you need more time, use the [RedisGuard::expand()] function.
-struct RedisMutex<T> {
+/// The default expiration time is 1000ms. If you need more time, use the [Guard::expand()] function.
+pub struct Mutex<T> {
     client: redis::Client,
     conn: Option<redis::Connection>,
-    data: RedisGeneric<T>,
+    data: Generic<T>,
     key: String,
     uuid: Uuid,
 }
 
-impl<T> RedisMutex<T> {
-    pub fn create(client: redis::Client, data: RedisGeneric<T>) -> Self {
+impl<T> Mutex<T> {
+    pub fn new(client: redis::Client, data: Generic<T>) -> Self {
         Self {
             client,
             key: format!("lock_{}", data.key),
@@ -111,8 +98,8 @@ impl<T> RedisMutex<T> {
     /// If you try to lock a value that is already locked by another instance in the same scope,
     /// this function will block until the lock is released, which will be happen after the lock
     /// expires (1000ms).
-    /// If you need to extend this time, you can use the [RedisGuard::expand()] function.
-    pub fn lock(&mut self) -> Result<RedisGuard<T>, LockError> {
+    /// If you need to extend this time, you can use the [Guard::expand()] function.
+    pub fn lock(&mut self) -> Result<Guard<T>, LockError> {
         let mut conn = match self.conn.take() {
             Some(conn) => conn,
             None => self
@@ -123,14 +110,14 @@ impl<T> RedisMutex<T> {
 
         let lock_cmd = redis::Script::new(LOCK_SCRIPT);
 
-        while RedisLockNum::from(
+        while LockNum::from(
             lock_cmd
                 .arg(&self.key)
                 .arg(1000)
                 .arg(&self.uuid.to_string())
                 .invoke::<i8>(&mut conn)
                 .expect("Failed to lock. You should not see this!"),
-        ) == RedisLockNum::Fail
+        ) == LockNum::Fail
         {
             println!("waiting for lock");
             std::hint::spin_loop();
@@ -138,33 +125,33 @@ impl<T> RedisMutex<T> {
 
         // store the connection for later use
         self.conn = Some(conn);
-        let lock = RedisGuard::new(self)?;
+        let lock = Guard::new(self)?;
 
         Ok(lock)
     }
 }
 
-impl<T> DerefMut for RedisMutex<T> {
+impl<T> DerefMut for Mutex<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.data
     }
 }
 
-impl<T> Deref for RedisMutex<T> {
-    type Target = RedisGeneric<T>;
+impl<T> Deref for Mutex<T> {
+    type Target = Generic<T>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
-pub struct RedisGuard<'a, T> {
-    lock: &'a mut RedisMutex<T>,
+pub struct Guard<'a, T> {
+    lock: &'a mut Mutex<T>,
     expanded: bool,
 }
 
-impl<'a, T> RedisGuard<'a, T> {
-    fn new(lock: &'a mut RedisMutex<T>) -> Result<Self, LockError> {
+impl<'a, T> Guard<'a, T> {
+    fn new(lock: &'a mut Mutex<T>) -> Result<Self, LockError> {
         Ok(Self {
             lock,
             expanded: false,
@@ -188,11 +175,11 @@ impl<'a, T> RedisGuard<'a, T> {
     }
 }
 
-impl<T> Deref for RedisGuard<'_, T>
+impl<T> Deref for Guard<'_, T>
 where
     T: DeserializeOwned + Serialize + Display,
 {
-    type Target = RedisGeneric<T>;
+    type Target = Generic<T>;
 
     fn deref(&self) -> &Self::Target {
         // Safety: The very existence of this Guard guarantees that we have exclusive access to the data.
@@ -200,7 +187,7 @@ where
     }
 }
 
-impl<T> DerefMut for RedisGuard<'_, T>
+impl<T> DerefMut for Guard<'_, T>
 where
     T: DeserializeOwned + Serialize + Display,
 {
@@ -210,7 +197,7 @@ where
     }
 }
 
-impl<T> Drop for RedisGuard<'_, T> {
+impl<T> Drop for Guard<'_, T> {
     fn drop(&mut self) {
         let conn = self.lock.conn.as_mut().expect("Connection should be there");
         let script = redis::Script::new(DROP_SCRIPT);
@@ -226,16 +213,16 @@ impl<T> Drop for RedisGuard<'_, T> {
 
 #[cfg(test)]
 mod tests {
-    use super::RedisMutex;
-    use crate::Di32;
+    use super::Mutex;
+    use crate::redis::Di32;
     use std::thread;
     #[test]
     fn test_create_lock() {
         let client = redis::Client::open("redis://localhost:6379").unwrap();
         let i32 = Di32::new("test_add_locking", client.clone());
         let i32_2 = Di32::new("test_add_locking", client.clone());
-        let mut lock = RedisMutex::create(client.clone(), i32);
-        let mut lock2 = RedisMutex::create(client, i32_2);
+        let mut lock: Mutex<i32> = Mutex::new(client.clone(), i32);
+        let mut lock2: Mutex<i32> = Mutex::new(client, i32_2);
 
         thread::scope(|s| {
             let t1 = s.spawn(move || {

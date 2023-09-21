@@ -3,19 +3,19 @@
 //! The generic type is not meant to be used directly.
 //!
 //!
-use crate::apply_operator;
+use crate::redis::apply_operator;
 use redis::{Commands, RedisResult};
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::{Debug, Display};
 use std::ops;
 
-pub struct RedisGeneric<T> {
+pub struct Generic<T> {
     pub(crate) cache: Option<T>,
     pub(crate) key: String,
     client: redis::Client,
 }
 
-impl<T> RedisGeneric<T>
+impl<T> Generic<T>
 where
     T: Display + Serialize + DeserializeOwned,
 {
@@ -26,7 +26,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use dtypes::Di32 as i32;
+    /// use dtypes::redis::Di32 as i32;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
     /// let mut i32 = i32::new("test_add", client.clone());
@@ -34,8 +34,8 @@ where
     /// let i32 = i32 + i32::with_value(2, "test_add2", client);
     /// assert_eq!(i32, 3);
     /// ```
-    pub fn new(field_name: &str, client: redis::Client) -> RedisGeneric<T> {
-        RedisGeneric {
+    pub fn new(field_name: &str, client: redis::Client) -> Generic<T> {
+        Generic {
             cache: None,
             key: field_name.to_string(),
             client,
@@ -44,7 +44,7 @@ where
 
     /// The with_value method creates a new instance of the type.
     /// If a value is already stored in Redis, it will be overwritten.
-    pub fn with_value(value: T, field_name: &str, client: redis::Client) -> RedisGeneric<T> {
+    pub fn with_value(value: T, field_name: &str, client: redis::Client) -> Generic<T> {
         let mut new_type = Self::new(field_name, client);
 
         new_type.store(value);
@@ -54,7 +54,7 @@ where
     /// The with_value_load method creates a new instance of the type.
     /// It loads the value from Redis.
     /// If there is no value stored in Redis, it stores a None in cache.
-    pub fn with_load(field_name: &str, client: redis::Client) -> RedisGeneric<T> {
+    pub fn with_load(field_name: &str, client: redis::Client) -> Generic<T> {
         let mut new_type = Self::new(field_name, client);
 
         new_type.cache = new_type.try_get();
@@ -64,11 +64,7 @@ where
     /// The with_value_default method creates a new instance of the type.
     /// If the value is not already stored in Redis, it will be stored.
     /// If the value is already stored in Redis, it will be loaded and your given value will be ignored.
-    pub fn with_value_default(
-        value: T,
-        field_name: &str,
-        client: redis::Client,
-    ) -> RedisGeneric<T> {
+    pub fn with_value_default(value: T, field_name: &str, client: redis::Client) -> Generic<T> {
         let mut new_type = Self::new(field_name, client);
 
         let v = new_type.try_get();
@@ -115,7 +111,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use dtypes::Di32 as i32;
+    /// use dtypes::redis::Di32 as i32;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
     /// let mut i32 = i32::with_value(1, "test_add", client.clone());
@@ -150,7 +146,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use dtypes::Di32 as i32;
+    /// use dtypes::redis::Di32 as i32;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
     /// let i32 = i32::with_value(3, "test_add", client.clone());
@@ -180,7 +176,7 @@ where
     }
 }
 
-impl<T> ops::Deref for RedisGeneric<T>
+impl<T> ops::Deref for Generic<T>
 where
     T: Display + Serialize + DeserializeOwned,
 {
@@ -191,95 +187,95 @@ where
     }
 }
 
-impl<T> ops::Add<T> for RedisGeneric<T>
+impl<T> ops::Add<T> for Generic<T>
 where
     T: ops::Add<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
     fn add(self, rhs: T) -> Self::Output {
         apply_operator(self, rhs, |a, b| a + b)
     }
 }
 
-impl<T> ops::Add<RedisGeneric<T>> for RedisGeneric<T>
+impl<T> ops::Add<Generic<T>> for Generic<T>
 where
     T: ops::Add<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
-    fn add(self, rhs: RedisGeneric<T>) -> Self::Output {
+    fn add(self, rhs: Generic<T>) -> Self::Output {
         self + rhs.into_inner()
     }
 }
 
-impl<T> ops::Sub<T> for RedisGeneric<T>
+impl<T> ops::Sub<T> for Generic<T>
 where
     T: ops::Sub<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
     fn sub(self, rhs: T) -> Self::Output {
         apply_operator(self, rhs, |a, b| a - b)
     }
 }
 
-impl<T> ops::Sub<RedisGeneric<T>> for RedisGeneric<T>
+impl<T> ops::Sub<Generic<T>> for Generic<T>
 where
     T: ops::Sub<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
-    fn sub(self, rhs: RedisGeneric<T>) -> Self::Output {
+    fn sub(self, rhs: Generic<T>) -> Self::Output {
         self - rhs.into_inner()
     }
 }
 
-impl<T> ops::Mul<T> for RedisGeneric<T>
+impl<T> ops::Mul<T> for Generic<T>
 where
     T: ops::Mul<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
     fn mul(self, rhs: T) -> Self::Output {
         apply_operator(self, rhs, |a, b| a * b)
     }
 }
 
-impl<T> ops::Mul<RedisGeneric<T>> for RedisGeneric<T>
+impl<T> ops::Mul<Generic<T>> for Generic<T>
 where
     T: ops::Mul<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
-    fn mul(self, rhs: RedisGeneric<T>) -> Self::Output {
+    fn mul(self, rhs: Generic<T>) -> Self::Output {
         self * rhs.into_inner()
     }
 }
 
-impl<T> ops::Div<T> for RedisGeneric<T>
+impl<T> ops::Div<T> for Generic<T>
 where
     T: ops::Div<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
     fn div(self, rhs: T) -> Self::Output {
         apply_operator(self, rhs, |a, b| a / b)
     }
 }
 
-impl<T> ops::Div<RedisGeneric<T>> for RedisGeneric<T>
+impl<T> ops::Div<Generic<T>> for Generic<T>
 where
     T: ops::Div<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
-    fn div(self, rhs: RedisGeneric<T>) -> Self::Output {
+    fn div(self, rhs: Generic<T>) -> Self::Output {
         self / rhs.into_inner()
     }
 }
 
-impl<T> ops::AddAssign<T> for RedisGeneric<T>
+impl<T> ops::AddAssign<T> for Generic<T>
 where
     T: ops::AddAssign + Display + Serialize + DeserializeOwned,
 {
@@ -294,16 +290,16 @@ where
     }
 }
 
-impl<T> ops::AddAssign<RedisGeneric<T>> for RedisGeneric<T>
+impl<T> ops::AddAssign<Generic<T>> for Generic<T>
 where
     T: ops::AddAssign + Display + Serialize + DeserializeOwned,
 {
-    fn add_assign(&mut self, rhs: RedisGeneric<T>) {
+    fn add_assign(&mut self, rhs: Generic<T>) {
         *self += rhs.into_inner();
     }
 }
 
-impl<T> ops::SubAssign<T> for RedisGeneric<T>
+impl<T> ops::SubAssign<T> for Generic<T>
 where
     T: ops::SubAssign + Display + Serialize + DeserializeOwned,
 {
@@ -318,94 +314,94 @@ where
     }
 }
 
-impl<T> ops::SubAssign<RedisGeneric<T>> for RedisGeneric<T>
+impl<T> ops::SubAssign<Generic<T>> for Generic<T>
 where
     T: ops::SubAssign + Display + Serialize + DeserializeOwned,
 {
-    fn sub_assign(&mut self, rhs: RedisGeneric<T>) {
+    fn sub_assign(&mut self, rhs: Generic<T>) {
         *self -= rhs.into_inner();
     }
 }
 
-impl<T> ops::BitOr<T> for RedisGeneric<T>
+impl<T> ops::BitOr<T> for Generic<T>
 where
     T: ops::BitOr<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
     fn bitor(self, rhs: T) -> Self::Output {
         apply_operator(self, rhs, |a, b| a | b)
     }
 }
 
-impl<T> ops::BitOr<RedisGeneric<T>> for RedisGeneric<T>
+impl<T> ops::BitOr<Generic<T>> for Generic<T>
 where
     T: ops::BitOr<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
-    fn bitor(self, rhs: RedisGeneric<T>) -> Self::Output {
+    fn bitor(self, rhs: Generic<T>) -> Self::Output {
         self | rhs.into_inner()
     }
 }
 
-impl<T> ops::BitAnd<T> for RedisGeneric<T>
+impl<T> ops::BitAnd<T> for Generic<T>
 where
     T: ops::BitAnd<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
     fn bitand(self, rhs: T) -> Self::Output {
         apply_operator(self, rhs, |a, b| a & b)
     }
 }
 
-impl<T> ops::BitAnd<RedisGeneric<T>> for RedisGeneric<T>
+impl<T> ops::BitAnd<Generic<T>> for Generic<T>
 where
     T: ops::BitAnd<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
-    fn bitand(self, rhs: RedisGeneric<T>) -> Self::Output {
+    fn bitand(self, rhs: Generic<T>) -> Self::Output {
         self & rhs.into_inner()
     }
 }
 
-impl<T> ops::BitXor<T> for RedisGeneric<T>
+impl<T> ops::BitXor<T> for Generic<T>
 where
     T: ops::BitXor<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
     fn bitxor(self, rhs: T) -> Self::Output {
         apply_operator(self, rhs, |a, b| a ^ b)
     }
 }
 
-impl<T> ops::BitXor<RedisGeneric<T>> for RedisGeneric<T>
+impl<T> ops::BitXor<Generic<T>> for Generic<T>
 where
     T: ops::BitXor<Output = T> + Display + Serialize + DeserializeOwned,
 {
-    type Output = RedisGeneric<T>;
+    type Output = Generic<T>;
 
-    fn bitxor(self, rhs: RedisGeneric<T>) -> Self::Output {
+    fn bitxor(self, rhs: Generic<T>) -> Self::Output {
         self ^ rhs.into_inner()
     }
 }
 
-impl<T: PartialEq> PartialEq<T> for RedisGeneric<T> {
+impl<T: PartialEq> PartialEq<T> for Generic<T> {
     fn eq(&self, other: &T) -> bool {
         self.cache.as_ref() == Some(other)
     }
 }
 
-impl<T: PartialEq> PartialEq<RedisGeneric<T>> for RedisGeneric<T> {
-    fn eq(&self, other: &RedisGeneric<T>) -> bool {
+impl<T: PartialEq> PartialEq<Generic<T>> for Generic<T> {
+    fn eq(&self, other: &Generic<T>) -> bool {
         self.cache == other.cache
     }
 }
 
-impl<T: Debug> Debug for RedisGeneric<T> {
+impl<T: Debug> Debug for Generic<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Generic")
             .field("value", &self.cache)
@@ -419,7 +415,7 @@ mod tests {
     use super::*;
     #[test]
     fn test_partialeq() {
-        let s1 = RedisGeneric::with_value(
+        let s1 = Generic::with_value(
             2,
             "test_partialeq",
             redis::Client::open("redis://localhost/").unwrap(),

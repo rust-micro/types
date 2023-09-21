@@ -1,17 +1,18 @@
 //! The integer module contains the Ti32 struct which is a wrapper around an i32 value stored in Redis.
 
-pub type Tusize = crate::RedisGeneric<usize>;
-pub type Tu8 = crate::RedisGeneric<u8>;
-pub type Tu16 = crate::RedisGeneric<u16>;
-pub type Tu32 = crate::RedisGeneric<u32>;
-pub type Tu64 = crate::RedisGeneric<u64>;
+use crate::redis::Generic;
+pub type Tusize = Generic<usize>;
+pub type Tu8 = Generic<u8>;
+pub type Tu16 = Generic<u16>;
+pub type Tu32 = Generic<u32>;
+pub type Tu64 = Generic<u64>;
 
-pub type Tisize = crate::RedisGeneric<isize>;
+pub type Tisize = Generic<isize>;
 
-pub type Ti8 = crate::RedisGeneric<i8>;
-pub type Ti16 = crate::RedisGeneric<i16>;
-pub type Ti32 = crate::RedisGeneric<i32>;
-pub type Ti64 = crate::RedisGeneric<i64>;
+pub type Ti8 = Generic<i8>;
+pub type Ti16 = Generic<i16>;
+pub type Ti32 = Generic<i32>;
+pub type Ti64 = Generic<i64>;
 
 #[cfg(test)]
 mod tests {

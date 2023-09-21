@@ -1,13 +1,9 @@
-use crate::RedisGeneric;
+use crate::redis::Generic;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fmt::Display;
 
-pub(crate) fn apply_operator<T>(
-    mut me: RedisGeneric<T>,
-    rhs: T,
-    func: impl Fn(T, T) -> T,
-) -> RedisGeneric<T>
+pub(crate) fn apply_operator<T>(mut me: Generic<T>, rhs: T, func: impl Fn(T, T) -> T) -> Generic<T>
 where
     T: Display + Serialize + DeserializeOwned,
 {
