@@ -41,6 +41,7 @@ mod bool_type;
 mod generic;
 mod helper;
 mod integer;
+mod lock;
 mod string;
 
 pub(crate) use helper::apply_operator;

@@ -127,6 +127,11 @@ where
         self.cache.as_ref().unwrap()
     }
 
+    pub fn acquire_mut(&mut self) -> &mut T {
+        self.cache = self.try_get();
+        self.cache.as_mut().unwrap()
+    }
+
     fn try_get(&self) -> Option<T> {
         let mut conn = self.get_conn();
         let res: RedisResult<String> = conn.get(&self.key);
