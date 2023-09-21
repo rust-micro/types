@@ -26,7 +26,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use types::i32;
+    /// use dtypes::Di32 as i32;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
     /// let mut i32 = i32::new("test_add", client.clone());
@@ -115,7 +115,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use types::i32;
+    /// use dtypes::Di32 as i32;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
     /// let mut i32 = i32::with_value(1, "test_add", client.clone());
@@ -145,7 +145,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use types::i32;
+    /// use dtypes::Di32 as i32;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
     /// let i32 = i32::with_value(3, "test_add", client.clone());

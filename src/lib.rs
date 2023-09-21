@@ -24,7 +24,7 @@
 //! # Usage
 //!
 //! ```
-//! use types::i32;
+//! use dtypes::Di32 as i32;
 //!
 //! let client = redis::Client::open("redis://localhost:6379").unwrap();
 //! let mut i32 = i32::with_value(1, "test_add", client.clone());
@@ -45,10 +45,10 @@ mod string;
 
 pub(crate) use helper::apply_operator;
 
-pub use bool_type::TBool as bool;
+pub use bool_type::TBool as Dbool;
 pub use generic::RedisGeneric;
 pub use integer::{
-    Ti16 as i16, Ti32 as i32, Ti64 as i64, Ti8 as i8, Tisize as isize, Tu16 as u16, Tu32 as u32,
-    Tu64 as u64, Tu8 as u8, Tusize as usize,
+    Ti16 as Di16, Ti32 as Di32, Ti64 as Di64, Ti8 as Di8, Tisize as Disize, Tu16 as Du16,
+    Tu32 as Du32, Tu64 as Du64, Tu8 as Du8, Tusize as Dusize,
 };
-pub use string::TString as String;
+pub use string::TString as DString;

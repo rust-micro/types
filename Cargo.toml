@@ -19,7 +19,7 @@ name = "2services"
 path = "examples/2services.rs"
 
 [lib]
-name = "types"
+name = "dtypes"
 
 [dependencies]
 redis = "0.23.3"

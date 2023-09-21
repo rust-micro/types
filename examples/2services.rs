@@ -1,6 +1,6 @@
+use dtypes::DString as String;
 use std::thread;
 use std::thread::sleep;
-use types::String;
 
 fn main() {
     thread::scope(|s| {
