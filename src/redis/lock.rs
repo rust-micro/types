@@ -61,6 +61,17 @@ const DROP_SCRIPT: &str = r#"
     end
     return 0"#;
 
+/// The uuid script.
+/// It is used to generate a uuid for the lock.
+/// It is a very simple counter that is stored in Redis and returns all numbers only once.
+///
+/// Takes 1 Argument:
+/// 1. The key of the field to increment and return.
+const UUID_SCRIPT: &str = r#"
+redis.call("incr", ARGV[1])
+local val = redis.call("get", ARGV[1])
+return val"#;
+
 /// The RedisMutex struct.
 /// It is used to lock a value in Redis, so that only one instance can access it at a time.
 /// You have to use RedisGeneric as the data type.
@@ -73,17 +84,26 @@ pub struct Mutex<T> {
     conn: Option<redis::Connection>,
     data: Generic<T>,
     key: String,
-    uuid: Uuid,
+    uuid: usize,
 }
 
 impl<T> Mutex<T> {
     pub fn new(client: redis::Client, data: Generic<T>) -> Self {
+        let mut conn = client
+            .get_connection()
+            .expect("Failed to get connection to Redis");
+
+        let uuid = redis::Script::new(UUID_SCRIPT)
+            .arg(format!("uuid_{}", data.key))
+            .invoke::<usize>(&mut conn)
+            .expect("Failed to get uuid");
+
         Self {
             client,
             key: format!("lock_{}", data.key),
             data,
-            conn: None,
-            uuid: Uuid::new_v4(),
+            conn: Some(conn),
+            uuid,
         }
     }
 
