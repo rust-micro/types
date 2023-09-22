@@ -7,7 +7,7 @@ This crate provides a set of types, which are backed by a server, and can be use
 
 ## Example
 
-```rust=
+```rust
 use dtypes::redis::DString as String;
 
 let client = redis::Client::open("redis://localhost/").unwrap();
