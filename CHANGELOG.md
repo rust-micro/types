@@ -4,9 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] - Lock and ADT - yyyy-mm-dd
+## [Unreleased] - DESCRIPTION - YYYY-MM-DD
 
-- add RedisMutex and RedisGuard
+- 
+
+## 0.2 - Lock and ADT - 2023-09-22
+
+- add Mutex and Guard
 - rename lib to dtypes
 - strip the string `redis` from all types and place them in a module named `redis`
 - add List and ListCache type
