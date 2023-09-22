@@ -13,7 +13,7 @@ use std::ops;
 pub struct Generic<T> {
     pub(crate) cache: Option<T>,
     pub(crate) key: String,
-    client: redis::Client,
+    pub(crate) client: redis::Client,
 }
 
 impl<T> Generic<T>
@@ -122,11 +122,6 @@ where
     pub fn acquire(&mut self) -> &T {
         self.cache = self.try_get();
         self.cache.as_ref().unwrap()
-    }
-
-    pub fn acquire_mut(&mut self) -> &mut T {
-        self.cache = self.try_get();
-        self.cache.as_mut().unwrap()
     }
 
     fn try_get(&self) -> Option<T> {
