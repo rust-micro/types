@@ -198,7 +198,7 @@ where
     /// let mut lock = Mutex::new(i32);
     ///
     /// let mut guard = lock.lock().unwrap();
-    /// sleep(std::time::Duration::from_millis(1000));
+    /// sleep(std::time::Duration::from_millis(1500));
     /// let res = guard.store(3);
     /// assert!(res.is_err(), "{:?}", res);
     /// ```
