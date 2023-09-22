@@ -2,11 +2,11 @@
 //!
 //! This crate provides a set of types that can be stored in Redis. The types are:
 //!
-//! * [bool](crate::bool)
+//! * [bool](crate::Dbool)
 //! * Integer types:
-//!     * signed Integer: [i8](crate::i8), [i16](crate::i16), [i32](crate::i32), [i64](crate::i64), [isize](crate::isize)
-//!     * unsigned Integer: [u8](crate::u8), [u16](crate::u16), [u32](crate::u32), [u64](crate::u64), [usize](crate::usize)
-//! * [String](crate::String)
+//!     * signed Integer: [i8](crate::redis::Di8), [i16](crate::redis::Di16), [i32](crate::redis::Di32), [i64](crate::redis::Di64), [isize](crate::redis::Disize)
+//!     * unsigned Integer: [u8](crate::redis::Du8), [u16](crate::redis::Du16), [u32](crate::redis::Du32), [u64](crate::redis::Du64), [usize](crate::redis::Dusize)
+//! * [String](crate::redis::DString)
 //!
 //! This crate implements the most common traits for the primitive types, so it is frictionless to use them in place.
 //! With this crate it is possible to create multiple services that shares the values via Redis.

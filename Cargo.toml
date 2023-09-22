@@ -21,9 +21,12 @@ path = "examples/2services.rs"
 [lib]
 name = "dtypes"
 
+[features]
+default = ["redis"]
+redis = ["dep:redis", "dep:serde_json", "dep:serde"]
+
 [dependencies]
-redis = { version = "0.23.3", features = ["script"] }
-serde = { version = "1.0.188", features = [] }
-serde_json = "1.0.106"
+redis = { version = "0.23.3", features = ["script"], optional = true }
+serde = { version = "1.0.188", features = [], optional = true }
+serde_json = { version = "1.0.106", optional = true }
 thiserror = "1.0.48"
-uuid = { version = "1.4.1", features = ["v4"] }

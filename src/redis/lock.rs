@@ -4,7 +4,6 @@ use serde::Serialize;
 use std::fmt::Display;
 use std::ops::{Deref, DerefMut};
 use thiserror::Error;
-use uuid::Uuid;
 
 #[derive(Error, Debug)]
 pub enum LockError {
@@ -165,6 +164,8 @@ impl<T> Deref for Mutex<T> {
     }
 }
 
+/// The guard struct for the Mutex.
+/// It is used to access the value and not for you to initialize it by your own.
 pub struct Guard<'a, T> {
     lock: &'a mut Mutex<T>,
     expanded: bool,

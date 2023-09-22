@@ -15,6 +15,7 @@ use std::ops::{Deref, DerefMut};
 /// list.push_back(&2);
 /// assert_eq!(list.len(), 2);
 /// assert_eq!(list.pop_front(), Some(1));
+/// list.clear();
 /// ```
 pub struct List<T> {
     key: String,
@@ -27,6 +28,12 @@ impl<T> List<T>
 where
     T: Serialize + DeserializeOwned,
 {
+    /// Creates a new List
+    ///
+    /// There is no `with_value` method like [Generic::with_value] because it is not possible to
+    /// provide a good default behaviour in redis. So you have to think about, how you want to handle
+    /// already stored values in redis.
+    /// If you want a small performance boost, look at [ListCache].
     pub fn new(key: &str, client: redis::Client) -> Self {
         Self {
             client,
@@ -36,23 +43,7 @@ where
         }
     }
 
-    pub fn with_value(val: &mut [T], key: &str, client: redis::Client) -> Self {
-        let mut conn = client.get_connection().unwrap();
-        for v in val.iter() {
-            redis::Cmd::rpush(
-                key,
-                serde_json::to_string(v).expect("Failed to serialize value"),
-            )
-            .execute(&mut conn);
-        }
-
-        Self {
-            client,
-            key: key.to_string(),
-            _conn: None,
-            _phantom: Default::default(),
-        }
-    }
+    /// Returns an iterator over the list.
     pub fn iter(&self) -> ListIter<T> {
         let len = self.len();
         ListIter {
@@ -61,6 +52,8 @@ where
             len,
         }
     }
+
+    /// Add a value to the front of the list
     pub fn push_front(&mut self, val: &T) {
         let mut conn = self.client.get_connection().unwrap();
         redis::Cmd::lpush(
@@ -70,6 +63,7 @@ where
         .execute(&mut conn);
     }
 
+    /// Add a value to the back of the list
     pub fn push_back(&mut self, val: &T) {
         let mut conn = self.client.get_connection().unwrap();
         redis::Cmd::rpush(
@@ -79,29 +73,34 @@ where
         .execute(&mut conn);
     }
 
+    /// Removes and returns the first value of the list
     pub fn pop_front(&mut self) -> Option<T> {
         let mut conn = self.client.get_connection().unwrap();
         let val: Option<String> = redis::Cmd::lpop(&self.key, None).query(&mut conn).ok();
         val.map(|v| serde_json::from_str(&v).expect("Failed to deserialize value"))
     }
 
+    /// Removes and returns the last value of the list
     pub fn pop_back(&mut self) -> Option<T> {
         let mut conn = self.client.get_connection().unwrap();
         let val: Option<String> = redis::Cmd::rpop(&self.key, None).query(&mut conn).ok();
         val.map(|v| serde_json::from_str(&v).expect("Failed to deserialize value"))
     }
 
+    /// Returns the length of the list
     pub fn len(&self) -> usize {
         let mut conn = self.client.get_connection().unwrap();
         let len: usize = redis::Cmd::llen(&self.key).query(&mut conn).unwrap();
         len
     }
 
+    /// Removes all values from the list
     pub fn clear(&self) {
         let mut conn = self.client.get_connection().unwrap();
         redis::Cmd::del(&self.key).execute(&mut conn);
     }
 
+    /// Returns true if the list contains the value
     pub fn contains(&self, val: &T) -> bool
     where
         T: PartialEq,
@@ -117,11 +116,13 @@ where
         val.is_some()
     }
 
+    /// Returns true if the list is empty
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 }
 
+/// An iterator over the list.
 pub struct ListIter<'a, T> {
     list: &'a List<T>,
     index: isize,
@@ -163,6 +164,7 @@ where
 /// list.push_back(2);
 /// assert_eq!(list.len(), 2);
 /// assert_eq!(list.pop_front(), Some(1));
+/// list.clear();
 /// ```
 pub struct ListCache<T> {
     list: List<T>,
@@ -173,6 +175,22 @@ impl<T> ListCache<T>
 where
     T: Serialize + DeserializeOwned,
 {
+    /// Creates a new ListCache
+    /// The list is loaded from the redis server.
+    /// If you want to create an empty list, use [ListCache::without_load]
+    pub fn new(key: &str, client: redis::Client) -> Self {
+        let mut s = Self::without_load(key, client);
+        s.pull();
+        s
+    }
+
+    /// Creates a new ListCache without loading the list from the redis server.
+    pub fn without_load(key: &str, client: redis::Client) -> Self {
+        let list = List::new(key, client);
+        let val = VecDeque::new();
+        Self { list, cache: val }
+    }
+
     pub fn pull(&mut self) {
         let mut conn = self.list.client.get_connection().unwrap();
         let val: VecDeque<T> = redis::Cmd::lrange(&self.list.key, 0, -1)
@@ -190,13 +208,13 @@ where
     }
 
     pub fn push_back(&mut self, val: T) {
+        self.list.push_back(&val);
         self.cache.push_back(val);
-        self.list.push_back(self.cache.back().unwrap());
     }
 
     pub fn push_front(&mut self, val: T) {
+        self.list.push_front(&val);
         self.cache.push_front(val);
-        self.list.push_front(self.cache.front().unwrap());
     }
 
     pub fn pop_back(&mut self) -> Option<T> {

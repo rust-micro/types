@@ -9,6 +9,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::{Debug, Display};
 use std::ops;
 
+/// The generic type is used to implement the common methods for all types.
 pub struct Generic<T> {
     pub(crate) cache: Option<T>,
     pub(crate) key: String,
