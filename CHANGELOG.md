@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased] - DESCRIPTION - YYYY-MM-DD
 
+- add SetLoad Type, which implements a counter based clock ordering
 - 
 
 ## 0.2 - Lock and ADT - 2023-09-22
@@ -14,7 +15,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - rename lib to dtypes
 - strip the string `redis` from all types and place them in a module named `redis`
 - add List and ListCache type
-- add SetLoad Type, which implements a counter based clock ordering
 
 ## 0.1 - Initial release - 2023-09-13
 
