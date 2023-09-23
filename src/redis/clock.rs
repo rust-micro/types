@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum SetLoadError {
+pub enum ClockOrderedError {
     #[error("Ordering number is not greater than current number stored in redis.")]
     OrderError,
 }
@@ -40,7 +40,7 @@ local key = ARGV[1]
 return {redis.call("GET", key), redis.call("GET", key .. ":order")}
 "#;
 
-/// The SetLoad type.
+/// The ClockOrdered type.
 ///
 /// It is used to store a value in redis and load it in sync.
 /// It tracks automatically an ordering number to ensure that the value is only stored if the order is greater than the current order, mostly from other instances.
@@ -52,16 +52,16 @@ return {redis.call("GET", key), redis.call("GET", key .. ":order")}
 /// Another use case is, when it is okay for you, that the value could be not the latest or
 /// computing a derived value multiple times is acceptable.
 #[derive(Debug)]
-pub struct SetLoad<T> {
+pub struct ClockOrdered<T> {
     data: Generic<T>,
     counter: usize,
 }
 
-impl<T> SetLoad<T>
+impl<T> ClockOrdered<T>
 where
     T: serde::Serialize + serde::de::DeserializeOwned,
 {
-    /// Creates a new SetLoad.
+    /// Creates a new ClockOrdered.
     /// The value is loaded from redis directly.
     pub fn new(data: Generic<T>) -> Self {
         let mut s = Self { data, counter: 0 };
@@ -76,13 +76,13 @@ where
     /// # Example
     /// ```
     /// use dtypes::redis::Generic;
-    /// use dtypes::redis::SetLoad;
+    /// use dtypes::redis::ClockOrdered;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
-    /// let mut i32 = Generic::with_value(1, "test_add_setload_example1", client.clone());
-    /// let mut setload = SetLoad::new(i32);
-    /// setload.store(2).unwrap();
-    /// assert_eq!(*setload, 2);
+    /// let mut i32 = Generic::with_value(1, "test_add_clock_ordered_example1", client.clone());
+    /// let mut clock_ordered = ClockOrdered::new(i32);
+    /// clock_ordered.store(2).unwrap();
+    /// assert_eq!(*clock_ordered, 2);
     /// ```
     ///
     /// The store can fail if the order is not greater than the current order.
@@ -92,26 +92,26 @@ where
     /// ```
     /// use std::thread;
     /// use dtypes::redis::Generic;
-    /// use dtypes::redis::SetLoad;
+    /// use dtypes::redis::ClockOrdered;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
     /// let client2 = client.clone();
     ///
     /// thread::scope(|s| {
     ///     let t1 = s.spawn(|| {
-    ///         let mut i32: Generic<i32> = Generic::new("test_add_setload_example2", client2);
-    ///         let mut setload = SetLoad::new(i32);
-    ///         while let Err(_) = setload.store(2) {}
-    ///         assert_eq!(*setload, 2);
+    ///         let mut i32: Generic<i32> = Generic::new("test_add_clock_ordered_example2", client2);
+    ///         let mut clock_ordered = ClockOrdered::new(i32);
+    ///         while let Err(_) = clock_ordered.store(2) {}
+    ///         assert_eq!(*clock_ordered, 2);
     ///     });
-    ///     let mut i32: Generic<i32> = Generic::new("test_add_setload_example2", client);
-    ///     let mut setload = SetLoad::new(i32);
-    ///     while let Err(_) = setload.store(3) {}
-    ///     assert_eq!(*setload, 3);
+    ///     let mut i32: Generic<i32> = Generic::new("test_add_clock_ordered_example2", client);
+    ///     let mut clock_ordered = ClockOrdered::new(i32);
+    ///     while let Err(_) = clock_ordered.store(3) {}
+    ///     assert_eq!(*clock_ordered, 3);
     ///     t1.join().unwrap();
     /// });
     /// ```
-    pub fn store(&mut self, val: T) -> Result<(), SetLoadError> {
+    pub fn store(&mut self, val: T) -> Result<(), ClockOrderedError> {
         self.counter += 1;
         let val_json = serde_json::to_string(&val).unwrap();
         let (v, order) = self.store_redis(&val_json);
@@ -122,36 +122,36 @@ where
                 return Ok(());
             }
         }
-        Err(SetLoadError::OrderError)
+        Err(ClockOrderedError::OrderError)
     }
 
     /// Stores the value in the redis server and blocks until succeeds.
-    /// Everything else is equal to [SetLoad::store].
+    /// Everything else is equal to [ClockOrdered::store].
     ///
     /// # Example
     /// ```
     /// use std::thread;
     /// use dtypes::redis::Generic;
-    /// use dtypes::redis::SetLoad;
+    /// use dtypes::redis::ClockOrdered;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
     /// let client2 = client.clone();
     ///
     /// thread::scope(|s| {
     ///     let t1 = s.spawn(|| {
-    ///         let mut i32: Generic<i32> = Generic::new("test_add_setload_example3", client2);
-    ///         let mut setload = SetLoad::new(i32);
-    ///         setload.store_blocking(2).unwrap();
-    ///         assert_eq!(*setload, 2);
+    ///         let mut i32: Generic<i32> = Generic::new("test_add_clock_ordered_example3", client2);
+    ///         let mut clock_ordered = ClockOrdered::new(i32);
+    ///         clock_ordered.store_blocking(2).unwrap();
+    ///         assert_eq!(*clock_ordered, 2);
     ///     });
-    ///     let mut i32: Generic<i32> = Generic::new("test_add_setload_example3", client);
-    ///     let mut setload = SetLoad::new(i32);
-    ///     setload.store_blocking(3).unwrap();
-    ///     assert_eq!(*setload, 3);
+    ///     let mut i32: Generic<i32> = Generic::new("test_add_clock_ordered_example3", client);
+    ///     let mut clock_ordered = ClockOrdered::new(i32);
+    ///     clock_ordered.store_blocking(3).unwrap();
+    ///     assert_eq!(*clock_ordered, 3);
     ///     t1.join().unwrap();
     /// });
     /// ```
-    pub fn store_blocking(&mut self, val: T) -> Result<(), SetLoadError> {
+    pub fn store_blocking(&mut self, val: T) -> Result<(), ClockOrderedError> {
         let val_json = serde_json::to_string(&val).unwrap();
         let mut res = self.store_redis(&val_json);
 
@@ -169,7 +169,7 @@ where
         redis::Script::new(SET_LOAD_SCRIPT)
             .arg(&self.data.key)
             .arg(self.counter)
-            .arg(&val)
+            .arg(val)
             .invoke(&mut conn)
             .expect("Could not execute script")
     }
@@ -205,7 +205,7 @@ where
     }
 }
 
-impl<T> Deref for SetLoad<T> {
+impl<T> Deref for ClockOrdered<T> {
     type Target = Generic<T>;
 
     fn deref(&self) -> &Self::Target {
@@ -213,7 +213,7 @@ impl<T> Deref for SetLoad<T> {
     }
 }
 
-impl<T> DerefMut for SetLoad<T> {
+impl<T> DerefMut for ClockOrdered<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.data
     }
@@ -223,13 +223,13 @@ impl<T> DerefMut for SetLoad<T> {
 mod tests {
     #[test]
     fn test_set_load() {
+        use crate::redis::ClockOrdered;
         use crate::redis::Generic;
-        use crate::redis::SetLoad;
 
         let client = redis::Client::open("redis://localhost:6379").unwrap();
-        let i32: Generic<i32> = Generic::new("test_add_setload", client.clone());
-        let mut setload = SetLoad::new(i32);
-        setload.store(2).unwrap();
-        assert_eq!(*setload, 2);
+        let i32: Generic<i32> = Generic::new("test_add_clock_ordered", client.clone());
+        let mut clock_ordered = ClockOrdered::new(i32);
+        clock_ordered.store(2).unwrap();
+        assert_eq!(*clock_ordered, 2);
     }
 }

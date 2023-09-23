@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased] - DESCRIPTION - YYYY-MM-DD
 
-- add SetLoad Type, which implements a counter based clock ordering
+- add ClockOrdered Type, which implements a counter based clock ordering
 - 
 
 ## 0.2 - Lock and ADT - 2023-09-22

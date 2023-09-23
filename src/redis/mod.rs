@@ -10,7 +10,7 @@
 //! * [List](redis::List)
 //! * Sync types:
 //!     * [Mutex](redis::Mutex)
-//!     * [SetLoad](redis::SetLoad)
+//!     * [ClockOrdered](redis::ClockOrdered)
 //!
 //! This crate implements the most common traits for the primitive types, so it is frictionless to use them in place.
 //! The methods of the types can be seen in the documentation of [Generic](redis::Generic).
@@ -37,17 +37,18 @@
 //! More examples can be found on the doc pages of the types.
 //!
 mod bool_type;
+mod clock;
 mod generic;
 mod helper;
 mod integer;
 mod list;
 mod mutex;
-mod set_load;
 mod string;
 
 pub(crate) use helper::apply_operator;
 
 pub use bool_type::TBool as Dbool;
+pub use clock::ClockOrdered;
 pub use generic::Generic;
 pub use integer::{
     Ti16 as Di16, Ti32 as Di32, Ti64 as Di64, Ti8 as Di8, Tisize as Disize, Tu16 as Du16,
@@ -55,5 +56,4 @@ pub use integer::{
 };
 pub use list::{List, ListCache, ListIter};
 pub use mutex::{Guard, LockError, Mutex};
-pub use set_load::{SetLoad, SetLoadError};
 pub use string::TString as DString;
