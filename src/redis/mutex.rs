@@ -103,6 +103,7 @@ end
 return nil"#;
 
 /// The RedisMutex struct.
+///
 /// It is used to lock a value in Redis, so that only one instance can access it at a time.
 /// You have to use RedisGeneric as the data type.
 /// It is a wrapper around the data type you want to store like the Mutex in std.

@@ -1,3 +1,4 @@
+use crate::redis::Generic;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::collections::VecDeque;

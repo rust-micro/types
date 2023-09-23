@@ -1,8 +1,4 @@
 //! This module contains the generic type.
-//! The generic type is used to implement the common methods for all types.
-//! The generic type is not meant to be used directly.
-//!
-//!
 use crate::redis::apply_operator;
 use redis::{Commands, RedisResult};
 use serde::{de::DeserializeOwned, Serialize};
@@ -10,6 +6,10 @@ use std::fmt::{Debug, Display};
 use std::ops;
 
 /// The generic type is used to implement the common methods for all types.
+///
+/// The generic type is not meant to be used directly. Instead use one of the aliases.
+///
+/// Mostly you will interact with the methods [Generic::store], [Generic::acquire] and [Generic::into_inner].
 pub struct Generic<T> {
     pub(crate) cache: Option<T>,
     pub(crate) key: String,
@@ -78,7 +78,7 @@ where
         new_type
     }
 
-    /// The set method sets the value of the type.
+    /// The store method sets the value of the type.
     pub fn store(&mut self, value: T) {
         let value = self.set(value);
         self.cache = Some(value);
@@ -106,7 +106,7 @@ where
         res.expect("Failed to set value");
     }
 
-    /// The get method returns a reference to the value stored in the type.
+    /// The acquire method returns a reference to the value stored in the type.
     /// Loads it from the redis directly.
     ///
     /// # Example

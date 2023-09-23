@@ -41,6 +41,7 @@ return {redis.call("GET", key), redis.call("GET", key .. ":order")}
 "#;
 
 /// The SetLoad type.
+///
 /// It is used to store a value in redis and load it in sync.
 /// It tracks automatically an ordering number to ensure that the value is only stored if the order is greater than the current order, mostly from other instances.
 /// The value is only stored if the order is greater than the current order.
