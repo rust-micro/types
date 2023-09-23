@@ -42,9 +42,9 @@ impl From<i8> for LockNum {
 /// 2. The timeout in seconds,
 /// 3. The value to store.
 const LOCK_SCRIPT: &str = r#"
-    local val = redis.call("get", ARGV[1] .. "_lock")
+    local val = redis.call("get", ARGV[1] .. ":lock")
     if val == false or val == ARGV[3] then
-        redis.call("setex", ARGV[1] .. "_lock", ARGV[2], ARGV[3])
+        redis.call("setex", ARGV[1] .. ":lock", ARGV[2], ARGV[3])
         return 1
     end
     return 0"#;
@@ -56,9 +56,9 @@ const LOCK_SCRIPT: &str = r#"
 /// 1. The key of the value to drop,
 /// 2. The value to check.
 const DROP_SCRIPT: &str = r#"
-    local current_lock = redis.call("get", ARGV[1] .. "_lock")
+    local current_lock = redis.call("get", ARGV[1] .. ":lock")
     if current_lock == ARGV[2] then
-        redis.call("del", ARGV[1] .. "_lock")
+        redis.call("del", ARGV[1] .. ":lock")
         return 1
     end
     return 0"#;
@@ -70,8 +70,8 @@ const DROP_SCRIPT: &str = r#"
 /// Takes 1 Argument:
 /// 1. The key of the value to lock.
 const UUID_SCRIPT: &str = r#"
-redis.call("incr", ARGV[1] .. "_uuids")
-local val = redis.call("get", ARGV[1] .. "_uuids")
+redis.call("incr", ARGV[1] .. ":uuids")
+local val = redis.call("get", ARGV[1] .. ":uuids")
 return val"#;
 
 /// The store script.
@@ -82,7 +82,7 @@ return val"#;
 /// 2. The uuid of the lock object,
 /// 3. The value to store.
 const STORE_SCRIPT: &str = r#"
-local current_lock = redis.call("get", ARGV[1] .. "_lock")
+local current_lock = redis.call("get", ARGV[1] .. ":lock")
 if current_lock == ARGV[2] then
     redis.call("set", ARGV[1], ARGV[3])
     return 1
@@ -96,7 +96,7 @@ return 0"#;
 /// 1. The key of the value to load,
 /// 2. The uuid of the lock.
 const LOAD_SCRIPT: &str = r#"
-local current_lock = redis.call("get", ARGV[1] .. "_lock")
+local current_lock = redis.call("get", ARGV[1] .. ":lock")
 if current_lock == ARGV[2] then
     local val = redis.call("get", ARGV[1])
     return val
@@ -276,7 +276,7 @@ where
         }
 
         let conn = self.lock.conn.as_mut().expect("Connection should be there");
-        let expand = redis::Cmd::expire(format!("{}_lock", &self.lock.data.key), 2);
+        let expand = redis::Cmd::expire(format!("{}:lock", &self.lock.data.key), 2);
         expand.execute(conn);
         self.expanded = true;
     }
