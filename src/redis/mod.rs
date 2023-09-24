@@ -42,7 +42,7 @@ mod generic;
 mod helper;
 mod integer;
 mod list;
-mod lock;
+mod mutex;
 mod string;
 
 pub(crate) use helper::apply_operator;
@@ -54,5 +54,5 @@ pub use integer::{
     Tu32 as Du32, Tu64 as Du64, Tu8 as Du8, Tusize as Dusize,
 };
 pub use list::{List, ListCache, ListIter};
-pub use lock::{Guard, LockError, Mutex};
+pub use mutex::{Guard, LockError, Mutex};
 pub use string::TString as DString;

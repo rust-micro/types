@@ -1,7 +1,6 @@
 use crate::redis::Generic;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::fmt::Display;
 use std::ops::{Deref, DerefMut};
 use thiserror::Error;
 
@@ -335,7 +334,7 @@ where
 
 impl<T> Deref for Guard<'_, T>
 where
-    T: DeserializeOwned + Serialize + Display,
+    T: DeserializeOwned + Serialize,
 {
     type Target = Generic<T>;
 
@@ -347,7 +346,7 @@ where
 
 impl<T> DerefMut for Guard<'_, T>
 where
-    T: DeserializeOwned + Serialize + Display,
+    T: DeserializeOwned + Serialize,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // Safety: The very existence of this Guard guarantees that we have exclusive access to the data.
