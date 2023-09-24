@@ -34,7 +34,6 @@ impl<'a, T> DerefMut for RwLockWriteGuard<'a, T> {
 
 impl<'a, T> Drop for RwLockWriteGuard<'a, T> {
     fn drop(&mut self) {
-        // FIXME: We have a deadlock, if the Writer will not dropped properly. Same for the reader!
         let client = self.lock.data.client.clone();
         let mut conn = client.get_connection().unwrap();
         let _: () = redis::Script::new(WRITER_LOCK_DROP)

@@ -29,19 +29,23 @@ use std::ops::{Deref, DerefMut};
 /// let mut i32 = Di32::with_value(1, "test_rwlock_example1", client.clone());
 /// let mut lock = RwLock::new(i32);
 ///
+/// // many reader locks can be held at once
 /// {
 ///     let read1 = lock.read().unwrap();
 ///     let read2 = lock.read().unwrap();
 ///     assert_eq!(*read1, 1);
-/// }
+/// } // read locks are dropped at this point
+///
+/// // only one writer lock can be held, however
 /// {
 ///     let mut write1 = lock.write().unwrap();
 ///     write1.store(2);
 ///     assert_eq!(*write1, 2);
-/// }
+/// } // write lock is dropped here
+///
+/// // look, you can read it again
 /// {
-///    let mut read1 = lock.read().unwrap();
-///    let read2 = lock.read().unwrap();
+///    let read1 = lock.read().unwrap();
 ///    assert_eq!(*read1, 2);
 /// }
 /// ```
@@ -54,7 +58,9 @@ use std::ops::{Deref, DerefMut};
 /// let client = redis::Client::open("redis://localhost:6379").unwrap();
 /// let i32 = Di32::with_value(1, "test_rwlock_example2", client.clone());
 /// let mut lock = RwLock::new(i32);
+/// // the reader lock is dropped immediately
 /// assert_eq!(*lock.read().unwrap(), 1);
+/// // Scoped threads are needed, otherwise the lifetime is unclear.
 /// thread::scope(|s| {
 ///        s.spawn(|| {
 ///            let mut write = lock.write().unwrap();
@@ -154,25 +160,52 @@ impl<T> DerefMut for RwLock<T> {
 mod tests {
     use super::*;
     use crate::redis::*;
+    use std::mem::ManuallyDrop;
+
     #[test]
     fn test_rwlock() {
-        use std::thread;
-        use Di32;
-        use RwLock;
-
         let client = redis::Client::open("redis://localhost:6379").unwrap();
         let i32 = Di32::with_value(1, "test_rwlock", client.clone());
         let mut lock = RwLock::new(i32);
         {
+            // multiple reader locks can be held at once
             let read = lock.read().unwrap();
             assert_eq!(*read, 1);
+            let read2 = lock.read().unwrap();
+            assert_eq!(*read2, 1);
         }
         {
+            // only one writer lock can be held, however
             let mut write = lock.write().unwrap();
             write.store(2);
             assert_eq!(*write, 2);
         }
+        // look, you can read it again
         let read = lock.read().unwrap();
         assert_eq!(*read, 2);
+    }
+
+    #[test]
+    fn test_rwlock_deadlock() {
+        let client = redis::Client::open("redis://localhost:6379").unwrap();
+        let i32 = Di32::with_value(1, "test_rwlock_deadlock", client.clone());
+        let mut lock = RwLock::new(i32);
+        {
+            let _ = ManuallyDrop::new(lock.read().unwrap());
+        }
+        // This should not deadlocked forever
+        // FIXME: This test blocks Pull request, because if a reader lock gets not dropped correctly. The whole systems blocks indefinitely.
+        {
+            let _ = lock.write().unwrap();
+        }
+
+        {
+            let _ = ManuallyDrop::new(lock.write().unwrap());
+        }
+        // This should not deadlocked forever
+        // FIXME: This tests the same as above, but for writer locks.
+        {
+            let _ = lock.read().unwrap();
+        }
     }
 }
