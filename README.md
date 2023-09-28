@@ -3,6 +3,12 @@
 [![Rust](https://github.com/rust-micro/types/actions/workflows/rust.yml/badge.svg)](https://github.com/rust-micro/types/actions/workflows/rust.yml)
 [![crates.io](https://img.shields.io/crates/v/micro_types.svg)](https://crates.io/crates/micro_types)
 
+---
+
+[![Repobeats analytics image](https://repobeats.axiom.co/api/embed/71482b23be17c3b52d28b472b11fdff312bfccb4.svg "Repobeats analytics image")](https://github.com/rust-micro/types/pulse)
+
+---
+
 This crate provides a set of types, which are backed by a server, and can be used to create a distributed system.
 
 ## Example
