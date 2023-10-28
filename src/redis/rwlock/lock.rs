@@ -2,6 +2,7 @@ use super::RwLockReadGuard;
 use super::RwLockWriteGuard;
 use crate::redis::rwlock::constants::{READER_LOCK, UUID_SCRIPT, WRITER_LOCK};
 use crate::redis::{Generic, LockError};
+use redis::Connection;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::ops::{Deref, DerefMut};
@@ -39,8 +40,10 @@ use std::ops::{Deref, DerefMut};
 /// // only one writer lock can be held, however
 /// {
 ///     let mut write1 = lock.write().unwrap();
-///     write1.store(2);
+///     write1.store(2).unwrap();
 ///     assert_eq!(*write1, 2);
+///     // the next line is not allowed, because it deadlocks.
+///     //let mut _ = lock.write().unwrap();
 /// } // write lock is dropped here
 ///
 /// // look, you can read it again
@@ -72,7 +75,7 @@ use std::ops::{Deref, DerefMut};
 /// ```
 pub struct RwLock<T> {
     pub(crate) data: Generic<T>,
-    writer_wanted: bool,
+    pub(crate) conn: Option<redis::Connection>,
 }
 
 impl<T> RwLock<T>
@@ -80,10 +83,7 @@ where
     T: Serialize + DeserializeOwned,
 {
     pub fn new(data: Generic<T>) -> Self {
-        Self {
-            data,
-            writer_wanted: false,
-        }
+        Self { data, conn: None }
     }
 
     /// Creates a new RwLock Reader.
@@ -92,18 +92,9 @@ where
     /// If there is a writer lock, this function blocks until the writer lock is dropped.
     /// Also if there is a writer locks waiting to be acquired, this function blocks until the writer lock is acquired and dropped.
     pub fn read(&self) -> Result<RwLockReadGuard<T>, LockError> {
-        let uuid = self.generate_uuid();
-        loop {
-            // small performance improvement, because if there is a local writer lock wanted, we don't need to check the remote writer lock
-            if self.writer_wanted {
-                continue;
-            }
-            let res = self.execute_script(&uuid, READER_LOCK);
-            if res {
-                break;
-            }
-        }
-        Ok(RwLockReadGuard::new(self, uuid))
+        let mut conn = self.client.clone().get_connection().unwrap();
+        let uuid = self.acquire_via_script(READER_LOCK, &mut conn);
+        Ok(RwLockReadGuard::new(self, uuid, conn))
     }
 
     /// Creates a new RwLock Writer.
@@ -112,32 +103,30 @@ where
     /// If there is a reader lock, this function blocks until the reader lock is dropped.
     /// The acquiring writer lock has priority over any waiting reader lock.
     pub fn write(&mut self) -> Result<RwLockWriteGuard<T>, LockError> {
-        self.writer_wanted = true;
-        let uuid = self.generate_uuid();
-        loop {
-            let res = self.execute_script(&uuid, WRITER_LOCK);
-            if res {
-                break;
-            }
+        let mut conn = self.client.clone().get_connection().unwrap();
+        let uuid = self.acquire_via_script(WRITER_LOCK, &mut conn);
+        Ok(RwLockWriteGuard::new(self, uuid, conn))
+    }
+
+    fn acquire_via_script(&self, script: &str, conn: &mut Connection) -> usize {
+        let uuid = self.generate_uuid(conn);
+        let mut res = false;
+
+        while !res {
+            res = redis::Script::new(script)
+                .arg(&self.data.key)
+                .arg(uuid)
+                .arg(2)
+                .invoke(conn)
+                .unwrap();
         }
-        self.writer_wanted = false;
-        Ok(RwLockWriteGuard::new(self, uuid))
+        uuid
     }
 
-    fn execute_script(&self, uuid: &usize, script: &str) -> bool {
-        let mut conn = self.data.client.get_connection().unwrap();
-        redis::Script::new(script)
-            .arg(&self.data.key)
-            .arg(uuid)
-            .invoke(&mut conn)
-            .unwrap()
-    }
-
-    pub(crate) fn generate_uuid(&self) -> usize {
-        let mut conn = self.data.client.get_connection().unwrap();
+    pub(crate) fn generate_uuid(&self, conn: &mut Connection) -> usize {
         redis::Script::new(UUID_SCRIPT)
             .arg(&self.data.key)
-            .invoke(&mut conn)
+            .invoke(conn)
             .unwrap()
     }
 }
@@ -177,7 +166,7 @@ mod tests {
         {
             // only one writer lock can be held, however
             let mut write = lock.write().unwrap();
-            write.store(2);
+            write.store(2).unwrap();
             assert_eq!(*write, 2);
         }
         // look, you can read it again
@@ -193,8 +182,8 @@ mod tests {
         {
             let _ = ManuallyDrop::new(lock.read().unwrap());
         }
+        eprintln!("1");
         // This should not deadlocked forever
-        // FIXME: This test blocks Pull request, because if a reader lock gets not dropped correctly. The whole systems blocks indefinitely.
         {
             let _ = lock.write().unwrap();
         }
@@ -203,7 +192,6 @@ mod tests {
             let _ = ManuallyDrop::new(lock.write().unwrap());
         }
         // This should not deadlocked forever
-        // FIXME: This tests the same as above, but for writer locks.
         {
             let _ = lock.read().unwrap();
         }

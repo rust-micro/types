@@ -7,4 +7,6 @@ pub enum RwLockError {
     StillReader,
     #[error("The lock could not be dropped.")]
     LockNotDroppable,
+    #[error("The lock is expired. Failed UUID: {0} ")]
+    LockExpired(usize),
 }

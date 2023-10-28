@@ -3,13 +3,12 @@ name = "micro_types"
 version = "0.2.2"
 edition = "2021"
 readme = "README.md"
-license = "MIT"
 license-file = "LICENSE.md"
 description = "Types for distributed systems"
 repository = "https://github.com/rust-micro/types"
 homepage = "https://github.com/rust-micro/types"
 keywords = ["micro", "distributed", "type", "redis"]
-categories = ["microservice", "type", "database"]
+categories = ["network-programming", "data-structures", "database"]
 documentation = "https://docs.rs/micro_types"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

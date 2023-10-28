@@ -8,4 +8,3 @@ pub use error::RwLockError;
 pub use lock::RwLock;
 pub use reader::RwLockReadGuard;
 pub use writer::RwLockWriteGuard;
-
