@@ -50,8 +50,9 @@ return 1
 /// 1. The key to lock
 /// 2. The uuid of the lock
 /// 3. The timeout in seconds for waiting
+// TODO: Should lock be expanded, if there is already another writer waiting?
 pub const WRITER_LOCK: &str = r#"
-redis.call("setex", ARGV[1] .. ":writer_waiting_list:" .. ARGV[2], ARGV[3], 1)
+redis.call("set", ARGV[1] .. ":writer_waiting_list:" .. ARGV[2], 1, "ex", ARGV[3])
 if redis.call("exists", ARGV[1] .. ":lock") == 1 then
     return 0
 end
