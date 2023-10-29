@@ -41,6 +41,7 @@
 //!
 //! It is possible to implement your own complex types by implementing the [BackedType](crate::BackedType) trait.
 //! But it should not be needed as long as your type implements some or all of the various [Ops](https://doc.rust-lang.org/std/ops/index.html) traits.
+mod barrier;
 mod bool_type;
 mod clock;
 mod generic;
@@ -53,6 +54,7 @@ mod string;
 
 pub(crate) use helper::apply_operator;
 
+pub use barrier::{Barrier, BarrierWaitResult};
 pub use bool_type::TBool as Dbool;
 pub use clock::ClockOrdered;
 pub use generic::Generic;

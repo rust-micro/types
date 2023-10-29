@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.2.4 - 2023-10-29
+
+- add Barrier type, which implements a barrier for sync based on Redis
+
 ## 0.2.3 - 2023-10-29
 
 - add RwLock Type, which implements a reader-writer lock based on Redis
