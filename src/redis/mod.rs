@@ -43,6 +43,7 @@ mod helper;
 mod integer;
 mod list;
 mod mutex;
+mod set_load;
 mod string;
 
 pub(crate) use helper::apply_operator;
@@ -55,4 +56,5 @@ pub use integer::{
 };
 pub use list::{List, ListCache, ListIter};
 pub use mutex::{Guard, LockError, Mutex};
+pub use set_load::{SetLoad, SetLoadError};
 pub use string::TString as DString;

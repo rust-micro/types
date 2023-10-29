@@ -41,12 +41,12 @@ impl From<i8> for LockNum {
 /// 2. The timeout in seconds,
 /// 3. The value to store.
 const LOCK_SCRIPT: &str = r#"
-    local val = redis.call("get", ARGV[1] .. ":lock")
-    if val == false or val == ARGV[3] then
-        redis.call("setex", ARGV[1] .. ":lock", ARGV[2], ARGV[3])
-        return 1
-    end
-    return 0"#;
+local val = redis.call("get", ARGV[1] .. ":lock")
+if val == false or val == ARGV[3] then
+    redis.call("setex", ARGV[1] .. ":lock", ARGV[2], ARGV[3])
+    return 1
+end
+return 0"#;
 
 /// The drop script.
 /// It is used to drop a value in Redis, so that only the instance that locked it can drop it.
@@ -55,12 +55,12 @@ const LOCK_SCRIPT: &str = r#"
 /// 1. The key of the value to drop,
 /// 2. The value to check.
 const DROP_SCRIPT: &str = r#"
-    local current_lock = redis.call("get", ARGV[1] .. ":lock")
-    if current_lock == ARGV[2] then
-        redis.call("del", ARGV[1] .. ":lock")
-        return 1
-    end
-    return 0"#;
+local current_lock = redis.call("get", ARGV[1] .. ":lock")
+if current_lock == ARGV[2] then
+    redis.call("del", ARGV[1] .. ":lock")
+    return 1
+end
+return 0"#;
 
 /// The uuid script.
 /// It is used to generate a uuid for the lock.
