@@ -117,7 +117,7 @@ impl From<u8> for RedisBarrierStatus {
 /// # Examples
 ///
 /// ```
-/// use dtypes::redis::sync::Barrier;
+/// use dtypes::redis::Barrier;
 ///
 /// let client = redis::Client::open("redis://localhost:6379").unwrap();
 /// let mut  barrier = Barrier::new(1, "barrier_doc_test", client);
@@ -135,7 +135,7 @@ impl BarrierWaitResult {
     /// # Examples
     ///
     /// ```
-    /// use dtypes::redis::sync::Barrier;
+    /// use dtypes::redis::Barrier;
     ///
     /// let client = redis::Client::open("redis://localhost:6379").unwrap();
     /// let mut  barrier = Barrier::new(1, "barrier_doc_test", client);
@@ -186,7 +186,7 @@ impl Barrier {
     /// # Examples
     ///
     /// ```
-    /// use dtypes::redis::sync::Barrier;
+    /// use dtypes::redis::Barrier;
     /// use std::thread;
     ///
     /// let n = 10;
