@@ -182,7 +182,6 @@ mod tests {
         {
             let _ = ManuallyDrop::new(lock.read().unwrap());
         }
-        eprintln!("1");
         // This should not deadlocked forever
         {
             let _ = lock.write().unwrap();
