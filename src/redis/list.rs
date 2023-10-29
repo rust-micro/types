@@ -31,7 +31,7 @@ where
 {
     /// Creates a new List
     ///
-    /// There is no `with_value` method like [Generic::with_value] because it is not possible to
+    /// There is no `with_value` method like (Generic::with_value)[crate::redis::Generic::with_value] because it is not possible to
     /// provide a good default behaviour in redis. So you have to think about, how you want to handle
     /// already stored values in redis.
     /// If you want a small performance boost, look at [ListCache].

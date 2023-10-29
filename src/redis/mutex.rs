@@ -340,7 +340,6 @@ where
     type Target = Generic<T>;
 
     fn deref(&self) -> &Self::Target {
-        // Safety: The very existence of this Guard guarantees that we have exclusive access to the data.
         &self.lock.data
     }
 }
@@ -350,7 +349,6 @@ where
     T: DeserializeOwned + Serialize,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // Safety: The very existence of this Guard guarantees that we have exclusive access to the data.
         &mut self.lock.data
     }
 }

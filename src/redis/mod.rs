@@ -21,6 +21,7 @@
 //! # Upcoming Features
 //!
 //! It will be possible to create happens-before relationships between store and load operations like atomic types.
+//! Also it will be possible to create other backends than Redis.
 //!
 //! # Usage
 //!
@@ -36,6 +37,10 @@
 //!
 //! More examples can be found on the doc pages of the types.
 //!
+//! # Custom Types
+//!
+//! It is possible to implement your own complex types by implementing the [BackedType](crate::BackedType) trait.
+//! But it should not be needed as long as your type implements some or all of the various [Ops](https://doc.rust-lang.org/std/ops/index.html) traits.
 mod bool_type;
 mod clock;
 mod generic;
@@ -43,6 +48,7 @@ mod helper;
 mod integer;
 mod list;
 mod mutex;
+mod rwlock;
 mod string;
 
 pub(crate) use helper::apply_operator;
@@ -56,4 +62,5 @@ pub use integer::{
 };
 pub use list::{List, ListCache, ListIter};
 pub use mutex::{Guard, LockError, Mutex};
+pub use rwlock::RwLock;
 pub use string::TString as DString;

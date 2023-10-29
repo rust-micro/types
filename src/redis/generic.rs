@@ -18,7 +18,7 @@ pub struct Generic<T> {
 
 impl<T> Generic<T>
 where
-    T: Display + Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned,
 {
     /// The new method creates a new instance of the type.
     /// It does not load or store any value in Redis.
